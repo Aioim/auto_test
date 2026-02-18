@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Tuple
 from cryptography.fernet import Fernet
 
-from .secrets import SecretsManager, SecurityConfig
+from .secrets_manager import SecretsManager, SecurityConfig
 from .env_loader import SecureEnvLoader
 from utils.logger import security_logger, logger
 

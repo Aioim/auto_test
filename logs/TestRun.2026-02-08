@@ -1,7 +1,0 @@
-2026-02-08 19:11:57 INFO [automation:logger:setup_logger:577] ======================================================================
-2026-02-08 19:11:57 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
-2026-02-08 19:11:57 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
-2026-02-08 19:11:57 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
-2026-02-08 19:11:57 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-08T11:11:57.151801+00:00
-2026-02-08 19:11:57 INFO [automation:logger:setup_logger:582] ======================================================================
-2026-02-08 19:11:57 WARNING [automation:data_loader:load_yaml_file:35] 跳过无效组 'input_text'（类型: str）in E:\Code\auto_ui_api\test_data\login_page.yaml

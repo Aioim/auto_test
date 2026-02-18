@@ -18,8 +18,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from .secrets import SecretsManager
-from .env_loader import SecureEnvLoader
+from utils.security.secrets_manager import SecretsManager
+from utils.security.env_loader import SecureEnvLoader
 
 
 def encrypt_value(value: str) -> str:

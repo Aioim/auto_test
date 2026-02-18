@@ -326,7 +326,7 @@ if __name__ == "__main__":
     print(f"  样例: {json.dumps(users[0], ensure_ascii=False, indent=2)[:200]}...")
 
     # 导出示例
-    output_dir = settings.project_root/"output"
+    output_dir = settings.project_root/"output/data_faker"
     output_dir.mkdir(exist_ok=True)
     generator.export_to_json(users, output_dir / "users.json")
     generator.export_to_csv(users, output_dir / "users.csv")

@@ -16,7 +16,8 @@
     #>>> secret.get()
     'my_password'
 """
-import secrets as secrets_lib
+import importlib
+secrets_lib = importlib.import_module('secrets')
 from typing import Any, Optional
 
 

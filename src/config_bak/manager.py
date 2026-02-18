@@ -3,11 +3,11 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, Field
-from config.env_loader import EnvLoader
-from config.yaml_loader import YamlLoader
-from config._path import PROJECT_ROOT
+from .env_loader import EnvLoader
+from .yaml_loader import YamlLoader
+from ._path import PROJECT_ROOT
 
-
+# print(PROJECT_ROOT)
 class _SettingsBase(BaseModel):
     """自定义设置基类，替代BaseSettings"""
 
@@ -101,17 +101,17 @@ class BrowserConfig(BaseModel):
 
 
 class LogConfig(BaseModel):
-    """日志配置模型"""
+    """浏览器配置模型"""
     log_dir: Path = PROJECT_ROOT / 'logs'
     log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
-    log_file: str = 'test_run.log'
+    log_file: str = 'TestRun'
 
     @field_validator("log_level")
     @classmethod
-    def validate_log_level(cls, v):
-        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        if v not in valid_levels:
-            raise ValueError(f"无效的日志级别: {v}, 必须是 {valid_levels}")
+    def validate_browser_type(cls, v):
+        valid_types = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        if v not in valid_types:
+            raise ValueError(f"无效的浏览器类型: {v}, 必须是 {valid_types}")
         return v
 
     # 添加模型配置
@@ -137,7 +137,7 @@ class TimeoutsConfig(BaseModel):
 
 class AllureConfig(BaseModel):
     """Allure报告配置"""
-    results_dir: Path = PROJECT_ROOT / "output/reports/allure-results"
+    results_dir: Path = PROJECT_ROOT / "reports/allure-results"
     auto_clean: bool = True
     default_severity: str = "critical"
 
@@ -220,33 +220,28 @@ class ConfigManager:
         self._overrides: Dict[str, Any] = {}
         self._initialized = False
 
-    def _load_config(self) -> AppConfig:
+    def _load_config(self) -> AppConfig | None:
         """加载完整配置"""
+        # 1. 加载基础YAML配置
+        base_config = self._yaml_loader.load_environment(
+            env=self._overrides.get("env") or os.getenv("ENV", "dev")
+        )
+
+        # 2. 合并环境变量
+        env_config = self._env_loader.load()
+
+        # 3. 深度合并基础配置和环境变量
+        merged_base_env = self._deep_merge(base_config, env_config)
+
+        # 4. 应用命令行覆盖
+        final_config = self._deep_merge(merged_base_env, self._overrides)
+
+        # 5. 创建配置实例
         try:
-            # 1. 加载基础YAML配置
-            env = self._overrides.get("env") or os.getenv("ENV", "dev")
-            base_config = self._yaml_loader.load_environment(env=env)
-
-            # 2. 合并环境变量
-            env_config = self._env_loader.load()
-
-            # 3. 深度合并基础配置和环境变量
-            merged_base_env = self._deep_merge(base_config, env_config)
-
-            # 4. 应用命令行覆盖
-            final_config = self._deep_merge(merged_base_env, self._overrides)
-
-            # 5. 创建配置实例
             config_instance = AppConfig(**final_config)
             return config_instance
         except ValidationError as e:
             self._handle_validation_error(e)
-        except FileNotFoundError as e:
-            raise RuntimeError(f"配置文件加载失败: {e}") from e
-        except ValueError as e:
-            raise RuntimeError(f"配置值错误: {e}") from e
-        except Exception as e:
-            raise RuntimeError(f"配置加载失败: {e}") from e
 
     def _deep_merge(self, base: Dict, override: Dict) -> Dict:
         """深度合并字典"""

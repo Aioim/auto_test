@@ -56,4 +56,4 @@ if __name__=='__main__':
     res=load_yaml_file(settings.project_root/'test_data/login_page.yaml')
     print(res['login_page_case'])
     print(res['llm_model'])
-    print(res['expected_entities'])
+    print(res['llm_model'])

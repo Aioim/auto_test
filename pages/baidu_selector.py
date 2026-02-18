@@ -9,8 +9,6 @@ search_input = Selector(
 search_button = Selector(
     role="button",
     role_name="百度一下",
-    # role_name_key="baidu_search_button",
-    # text="百度一下",
     description="百度搜索按钮"
 )
 

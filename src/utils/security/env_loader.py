@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, Set
 from cryptography.fernet import InvalidToken
 
-from .secrets import SecretsManager
+from .secrets_manager import SecretsManager
 from .secret_str import SecretStr
 from utils.logger import security_logger, logger
 

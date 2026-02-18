@@ -1,7 +1,12 @@
-2026-02-13 20:12:11 INFO [automation:logger:setup_logger:577] ======================================================================
-2026-02-13 20:12:11 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
-2026-02-13 20:12:11 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
-2026-02-13 20:12:11 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
-2026-02-13 20:12:11 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-13T12:12:11.241580+00:00
-2026-02-13 20:12:11 INFO [automation:logger:setup_logger:582] ======================================================================
-2026-02-13 20:12:11 INFO [automation:_test_data:__init__:373] TestDataManager initialized with data dir: E:\Code\auto_ui_api\logs\test_data
+2026-02-18 17:20:09 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 17:20:09 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 17:20:09 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 17:20:09 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 17:20:09 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T09:20:09.259100+00:00
+2026-02-18 17:20:09 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 17:22:15 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 17:22:15 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 17:22:15 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 17:22:15 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 17:22:15 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T09:22:15.971331+00:00
+2026-02-18 17:22:15 INFO [automation:logger:setup_logger:582] ======================================================================

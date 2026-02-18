@@ -5,7 +5,7 @@
 import os
 from typing import Any, Dict
 from dotenv import load_dotenv
-from config._path import PROJECT_ROOT
+from ._path import PROJECT_ROOT
 
 
 class EnvLoader:
@@ -33,13 +33,7 @@ class EnvLoader:
     def _load_system_env():
         """加载系统环境变量并进行环境自适应优化"""
         import platform
-
-        # 延迟导入可选依赖
-        psutil = None
-        try:
-            import psutil
-        except ImportError:
-            pass  # psutil 是可选依赖
+        import psutil
 
         # 1. 检测CI/CD环境
         ci_env_vars = {
@@ -80,26 +74,22 @@ class EnvLoader:
         # 2. 检测容器环境
         is_container = False
 
-        # 先检查环境变量（更快）
-        container_vars = ["DOCKER_CONTAINER", "KUBERNETES_SERVICE_HOST", "CONTAINERIZED"]
-        if any(os.getenv(var) for var in container_vars):
-            is_container = True
-        else:
-            # 再检查容器标记文件
-            container_markers = [
-                "/.dockerenv",
-                "/run/.containerenv"
-            ]
+        # 检查容器标记文件
+        container_markers = [
+            "/.dockerenv",
+            "/run/.containerenv",
+            "/proc/1/cgroup"
+        ]
 
-            # 仅在非Windows系统上检查文件标记
-            if platform.system().lower() != "windows":
-                for marker in container_markers:
-                    try:
-                        if os.path.exists(marker):
-                            is_container = True
-                            break
-                    except Exception:
-                        pass  # 忽略文件系统访问错误
+        for marker in container_markers:
+            if os.path.exists(marker):
+                is_container = True
+                break
+
+        # 检查环境变量
+        container_vars = ["DOCKER_CONTAINER", "KUBERNETES_SERVICE_HOST", "CONTAINERIZED"]
+        if not is_container:
+            is_container = any(os.getenv(var) for var in container_vars)
 
         if is_container:
             os.environ.setdefault("CONTAINER_ENVIRONMENT", "true")
@@ -107,15 +97,14 @@ class EnvLoader:
             os.environ.setdefault("ENABLE_JS", "true")
 
             # 容器资源限制优化
-            if psutil:
-                try:
-                    # 检测容器内存限制
-                    mem_limit = psutil.virtual_memory().total
-                    if mem_limit < 2 * 1024 * 1024 * 1024:  # < 2GB
-                        os.environ.setdefault("RESOURCE_CLEANUP_TIMEOUT", "3")
-                        os.environ.setdefault("MAX_MEMORY_MB", "1500")
-                except Exception:
-                    pass  # 忽略资源检测失败
+            try:
+                # 检测容器内存限制
+                mem_limit = psutil.virtual_memory().total
+                if mem_limit < 2 * 1024 * 1024 * 1024:  # < 2GB
+                    os.environ.setdefault("RESOURCE_CLEANUP_TIMEOUT", "3")
+                    os.environ.setdefault("MAX_MEMORY_MB", "1500")
+            except Exception:
+                pass  # 忽略资源检测失败
 
         # 3. 检测操作系统和架构
         system_info = {
@@ -172,36 +161,26 @@ class EnvLoader:
         # 检测企业CA证书
         ca_paths = [
             os.getenv("REQUESTS_CA_BUNDLE"),
-            os.getenv("SSL_CERT_FILE")
+            os.getenv("SSL_CERT_FILE"),
+            "/etc/ssl/certs/ca-certificates.crt",  # Debian/Ubuntu
+            "/etc/pki/tls/certs/ca-bundle.crt",  # RHEL/CentOS
+            "/etc/ssl/certs/ca-certificates.crt"  # Alpine
         ]
 
-        # 仅在非Windows系统上检查系统CA证书路径
-        if platform.system().lower() != "windows":
-            ca_paths.extend([
-                "/etc/ssl/certs/ca-certificates.crt",  # Debian/Ubuntu
-                "/etc/pki/tls/certs/ca-bundle.crt",  # RHEL/CentOS
-                "/etc/ssl/certs/ca-certificates.crt"  # Alpine
-            ])
-
         for ca_path in ca_paths:
-            if ca_path:
-                try:
-                    if os.path.exists(ca_path):
-                        os.environ.setdefault("CUSTOM_CA_BUNDLE", ca_path)
-                        break
-                except Exception:
-                    pass  # 忽略文件系统访问错误
+            if ca_path and os.path.exists(ca_path):
+                os.environ.setdefault("CUSTOM_CA_BUNDLE", ca_path)
+                break
 
         # 7. 性能优化（基于CPU核心数）
-        if psutil:
-            try:
-                cpu_count = psutil.cpu_count(logical=False) or psutil.cpu_count()
-                if cpu_count:
-                    # 设置并行工作进程数建议值
-                    worker_count = min(cpu_count, 4)  # 最多4个worker
-                    os.environ.setdefault("WORKER_COUNT", str(worker_count))
-            except Exception:
-                pass  # 忽略CPU检测失败
+        try:
+            cpu_count = psutil.cpu_count(logical=False) or psutil.cpu_count()
+            if cpu_count:
+                # 设置并行工作进程数建议值
+                worker_count = min(cpu_count, 4)  # 最多4个worker
+                os.environ.setdefault("WORKER_COUNT", str(worker_count))
+        except Exception:
+            pass  # 忽略CPU检测失败
 
         # 8. 安全加固
         # 检测是否在受限环境
@@ -220,8 +199,7 @@ class EnvLoader:
                 "platform": system_info["platform"],
                 "machine": system_info["machine"],
                 "debug_mode": is_debug,
-                "restricted_environment": is_restricted,
-                "psutil_available": psutil is not None
+                "restricted_environment": is_restricted
             }
 
             print("\n" + "=" * 60)

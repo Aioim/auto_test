@@ -21,7 +21,7 @@ from playwright.sync_api import Page, Locator, ElementHandle
 
 # Allure 导入容错处理
 try:
-    import allure
+    
 
     _ALLURE_AVAILABLE = True
 except ImportError:
@@ -169,7 +169,7 @@ class ScreenshotHelper:
     """
 
     # 从配置读取默认值（支持外部化配置）
-    DEFAULT_SCREENSHOT_DIR = getattr(settings, "SCREENSHOT_DIR", "screenshots")
+    DEFAULT_SCREENSHOT_DIR = getattr(settings, "SCREENSHOT_DIR", "output/screenshots")
     DEFAULT_FORMAT = ScreenshotFormat(getattr(settings, "SCREENSHOT_FORMAT", "png"))
     DEFAULT_QUALITY = getattr(settings, "SCREENSHOT_QUALITY", ScreenshotQuality.HIGH.value)
     DEFAULT_TIMEOUT = getattr(settings, "SCREENSHOT_TIMEOUT", 5000)

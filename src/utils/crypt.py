@@ -7,7 +7,7 @@ from typing import List, Dict, Optional, Tuple
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from dotenv import dotenv_values, set_key
+from dotenv import dotenv_values
 from config import settings
 
 
