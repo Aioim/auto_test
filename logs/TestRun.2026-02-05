@@ -1,0 +1,86 @@
+2026-02-05 22:33:15 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:33:15 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:33:15 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:33:15 INFO [automation:logger:setup_logger:580] 🌐 Environment: production
+2026-02-05 22:33:15 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:33:15.444400+00:00
+2026-02-05 22:33:15 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:33:15 INFO [automation:_test_data:__init__:373] TestDataManager initialized with data dir: E:\Code\auto_ui_api\logs\test_data
+2026-02-05 22:34:21 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:34:21 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:34:21 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:34:21 INFO [automation:logger:setup_logger:580] 🌐 Environment: production
+2026-02-05 22:34:21 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:34:21.845042+00:00
+2026-02-05 22:34:21 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:36:05 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:36:05 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:36:05 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:36:05 INFO [automation:logger:setup_logger:580] 🌐 Environment: production
+2026-02-05 22:36:05 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:36:05.913495+00:00
+2026-02-05 22:36:05 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:36:05 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:41:29 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:41:29 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:41:29 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:41:29 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:41:29 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:41:29.212943+00:00
+2026-02-05 22:41:29 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:41:29 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:43:24 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:43:24 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:43:24 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:43:24 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:43:24 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:43:24.493699+00:00
+2026-02-05 22:43:24 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:43:24 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:43:34 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:43:34 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:43:34 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:43:34 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:43:34 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:43:34.655938+00:00
+2026-02-05 22:43:34 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:43:34 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:43:35 INFO [automation:base_page:goto:73] Navigate to: https://www.baidu.com
+2026-02-05 22:43:35 INFO [automation:base_page:goto:79] Page loaded in 0.22s
+2026-02-05 22:46:37 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:46:37 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:46:37 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:46:37 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:46:37 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:46:37.061434+00:00
+2026-02-05 22:46:37 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:46:37 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:46:37 INFO [automation:base_page:goto:73] Navigate to: https://www.baidu.com
+2026-02-05 22:46:38 INFO [automation:base_page:goto:79] Page loaded in 0.23s
+2026-02-05 22:47:43 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:47:43 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:47:43 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:47:43 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:47:43 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:47:43.003180+00:00
+2026-02-05 22:47:43 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:47:43 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:47:43 INFO [automation:base_page:goto:73] Navigate to: https://www.baidu.com
+2026-02-05 22:47:44 INFO [automation:base_page:goto:79] Page loaded in 0.22s
+2026-02-05 22:50:26 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:50:26 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:50:26 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:50:26 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:50:26 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:50:26.432034+00:00
+2026-02-05 22:50:26 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:50:26 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:50:30 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:50:30 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:50:30 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:50:30 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:50:30 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:50:30.700697+00:00
+2026-02-05 22:50:30 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:50:30 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:50:31 INFO [automation:base_page:goto:76] Navigate to: https://www.baidu.com
+2026-02-05 22:50:32 INFO [automation:base_page:goto:82] Page loaded in 0.55s
+2026-02-05 22:50:41 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-05 22:50:41 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:50:41 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:50:41 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-05 22:50:41 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-05T14:50:41.566761+00:00
+2026-02-05 22:50:41 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-05 22:50:41 DEBUG [performance:logger:<module>:685] logger_ing
+2026-02-05 22:50:42 INFO [automation:base_page:goto:76] Navigate to: https://www.baidu.com
+2026-02-05 22:50:42 INFO [automation:base_page:goto:82] Page loaded in 0.60s

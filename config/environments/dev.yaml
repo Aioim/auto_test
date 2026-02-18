@@ -1,0 +1,26 @@
+# 开发环境配置
+base_url: "https://dev.example.com"
+api_base_url: "https://api-dev.example.com"
+
+
+timeouts:
+  page_load: 45000   # 开发环境更长的超时
+
+logging:
+  level: "debug"     # 详细日志
+
+# 开发特定配置
+debug_mode:
+  preserve_context_on_failure: true # 失败时保留上下文
+  show_console_logs: true           # 显示控制台日志
+
+# 测试数据配置
+test_data:
+  encryption_key_path: "test_data/credentials/encryption.key"
+  mock_dir: "test_data/mock"
+  visual_baseline_dir: "test_data/visual/baseline"
+
+# 本地服务配置
+services:
+  mock_server_port: 8080
+  visual_validation_threshold: 0.92

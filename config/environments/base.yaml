@@ -1,0 +1,30 @@
+# 基础配置 (所有环境共享)
+timeouts:
+  page_load: 30000    # 页面加载超时 (毫秒)
+  element_wait: 10000 # 元素等待超时 (毫秒)
+  api: 15000         # API请求超时 (毫秒)
+
+browser:
+  headless: true     # 默认无头模式
+  type: "chromium"   # 默认浏览器类型
+  enable_js: true    # 启用JavaScript
+  viewport:
+    width: 1980
+    height: 1080
+
+allure:
+  auto_clean: true   # 自动清理旧报告
+  default_severity: "critical" # 默认严重级别
+
+logging:
+  level: "info"      # 日志级别: debug/info/warning/error
+
+resource_cleanup:
+  timeout: 5         # 资源清理超时 (秒)
+  max_memory_mb: 1024 # 最大内存限制
+
+selector_strategy: "lenient" # 选择器策略: strict/lenient
+
+video_recording: "failed" # 视频录制策略: always/failed/off
+
+enable_network_tracing: true # 启用网络追踪

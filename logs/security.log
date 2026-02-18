@@ -1,0 +1,444 @@
+2026-02-02 21:39:00 INFO ======================================================================
+2026-02-02 21:39:00 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 21:39:00 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 21:39:00 INFO 🌐 Environment: dev
+2026-02-02 21:39:00 INFO ⏰ UTC Time: 2026-02-02T13:39:00.344640+00:00
+2026-02-02 21:39:00 INFO ======================================================================
+2026-02-02 21:39:00 INFO TestDataManager initialized with data dir: ..\logs\test_data
+2026-02-02 22:33:10 INFO ======================================================================
+2026-02-02 22:33:10 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:33:10 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:33:10 INFO 🌐 Environment: dev
+2026-02-02 22:33:10 INFO ⏰ UTC Time: 2026-02-02T14:33:10.453937+00:00
+2026-02-02 22:33:10 INFO ======================================================================
+2026-02-02 22:33:10 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:33:10 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:33:10 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:37:03 INFO ======================================================================
+2026-02-02 22:37:03 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:37:03 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:37:03 INFO 🌐 Environment: dev
+2026-02-02 22:37:03 INFO ⏰ UTC Time: 2026-02-02T14:37:03.875744+00:00
+2026-02-02 22:37:03 INFO ======================================================================
+2026-02-02 22:37:03 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:37:03 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:37:03 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:37:18 INFO ======================================================================
+2026-02-02 22:37:18 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:37:18 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:37:18 INFO 🌐 Environment: dev
+2026-02-02 22:37:18 INFO ⏰ UTC Time: 2026-02-02T14:37:18.488490+00:00
+2026-02-02 22:37:18 INFO ======================================================================
+2026-02-02 22:37:18 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:37:18 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:37:18 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:37:18 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:37:18 INFO Secret purged from memory: db_password
+2026-02-02 22:37:35 INFO ======================================================================
+2026-02-02 22:37:35 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:37:35 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:37:35 INFO 🌐 Environment: dev
+2026-02-02 22:37:35 INFO ⏰ UTC Time: 2026-02-02T14:37:35.735721+00:00
+2026-02-02 22:37:35 INFO ======================================================================
+2026-02-02 22:37:35 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:37:35 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:37:35 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:37:35 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:37:35 INFO Secret purged from memory: db_password
+2026-02-02 22:38:44 INFO ======================================================================
+2026-02-02 22:38:44 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:38:44 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:38:44 INFO 🌐 Environment: dev
+2026-02-02 22:38:44 INFO ⏰ UTC Time: 2026-02-02T14:38:44.124653+00:00
+2026-02-02 22:38:44 INFO ======================================================================
+2026-02-02 22:38:44 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:38:44 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:38:44 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:38:44 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:38:44 INFO Secret purged from memory: db_password
+2026-02-02 22:39:14 INFO ======================================================================
+2026-02-02 22:39:14 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:39:14 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:39:14 INFO 🌐 Environment: dev
+2026-02-02 22:39:14 INFO ⏰ UTC Time: 2026-02-02T14:39:14.244641+00:00
+2026-02-02 22:39:14 INFO ======================================================================
+2026-02-02 22:39:14 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:39:14 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:39:14 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:39:14 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:39:14 INFO Secret purged from memory: db_password
+2026-02-02 22:39:56 INFO ======================================================================
+2026-02-02 22:39:56 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:39:56 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:39:56 INFO 🌐 Environment: dev
+2026-02-02 22:39:56 INFO ⏰ UTC Time: 2026-02-02T14:39:56.736247+00:00
+2026-02-02 22:39:56 INFO ======================================================================
+2026-02-02 22:39:56 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:39:56 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:39:56 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:39:56 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:39:56 INFO Secret purged from memory: db_password
+2026-02-02 22:40:45 INFO ======================================================================
+2026-02-02 22:40:45 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:40:45 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:40:45 INFO 🌐 Environment: dev
+2026-02-02 22:40:45 INFO ⏰ UTC Time: 2026-02-02T14:40:45.454165+00:00
+2026-02-02 22:40:45 INFO ======================================================================
+2026-02-02 22:40:45 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:40:45 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:40:45 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:40:45 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:40:45 INFO Secret purged from memory: db_password
+2026-02-02 22:41:35 INFO ======================================================================
+2026-02-02 22:41:35 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:41:35 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:41:35 INFO 🌐 Environment: dev
+2026-02-02 22:41:35 INFO ⏰ UTC Time: 2026-02-02T14:41:35.047337+00:00
+2026-02-02 22:41:35 INFO ======================================================================
+2026-02-02 22:41:35 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:41:35 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:41:35 INFO Secret stored: api_key (encrypted in memory)
+2026-02-02 22:41:35 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:41:35 INFO Secret purged from memory: db_password
+2026-02-02 22:42:17 INFO ======================================================================
+2026-02-02 22:42:17 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:42:17 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:42:17 INFO 🌐 Environment: dev
+2026-02-02 22:42:17 INFO ⏰ UTC Time: 2026-02-02T14:42:17.300442+00:00
+2026-02-02 22:42:17 INFO ======================================================================
+2026-02-02 22:42:17 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:42:17 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:42:17 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:43:02 INFO ======================================================================
+2026-02-02 22:43:02 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:43:02 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:43:02 INFO 🌐 Environment: dev
+2026-02-02 22:43:02 INFO ⏰ UTC Time: 2026-02-02T14:43:02.001633+00:00
+2026-02-02 22:43:02 INFO ======================================================================
+2026-02-02 22:43:02 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:43:02 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:43:02 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:44:01 INFO ======================================================================
+2026-02-02 22:44:01 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:44:01 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:44:01 INFO 🌐 Environment: dev
+2026-02-02 22:44:01 INFO ⏰ UTC Time: 2026-02-02T14:44:01.380908+00:00
+2026-02-02 22:44:01 INFO ======================================================================
+2026-02-02 22:44:01 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:44:01 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:44:01 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:44:08 INFO ======================================================================
+2026-02-02 22:44:08 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:44:08 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:44:08 INFO 🌐 Environment: dev
+2026-02-02 22:44:08 INFO ⏰ UTC Time: 2026-02-02T14:44:08.669102+00:00
+2026-02-02 22:44:08 INFO ======================================================================
+2026-02-02 22:44:08 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:44:08 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:44:08 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:44:27 INFO ======================================================================
+2026-02-02 22:44:27 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:44:27 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:44:27 INFO 🌐 Environment: dev
+2026-02-02 22:44:27 INFO ⏰ UTC Time: 2026-02-02T14:44:27.476115+00:00
+2026-02-02 22:44:27 INFO ======================================================================
+2026-02-02 22:44:27 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:44:27 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:44:27 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:46:09 INFO ======================================================================
+2026-02-02 22:46:09 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:46:09 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:46:09 INFO 🌐 Environment: dev
+2026-02-02 22:46:09 INFO ⏰ UTC Time: 2026-02-02T14:46:09.525246+00:00
+2026-02-02 22:46:09 INFO ======================================================================
+2026-02-02 22:46:09 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:46:09 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:46:09 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:46:09 INFO Secret stored: db_password1 (encrypted in memory)
+2026-02-02 22:46:33 INFO ======================================================================
+2026-02-02 22:46:33 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 22:46:33 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 22:46:33 INFO 🌐 Environment: dev
+2026-02-02 22:46:33 INFO ⏰ UTC Time: 2026-02-02T14:46:33.441630+00:00
+2026-02-02 22:46:33 INFO ======================================================================
+2026-02-02 22:46:33 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:46:33 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 22:46:33 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 22:46:33 INFO Secret stored: db_password1 (encrypted in memory)
+2026-02-02 23:23:06 INFO ======================================================================
+2026-02-02 23:23:06 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 23:23:06 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 23:23:06 INFO 🌐 Environment: production
+2026-02-02 23:23:06 INFO ⏰ UTC Time: 2026-02-02T15:23:06.840869+00:00
+2026-02-02 23:23:06 INFO ======================================================================
+2026-02-02 23:23:06 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:23:06 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:23:06 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 23:23:06 INFO Secret stored: db_password1 (encrypted in memory)
+2026-02-02 23:23:52 INFO ======================================================================
+2026-02-02 23:23:52 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 23:23:52 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 23:23:52 INFO 🌐 Environment: production
+2026-02-02 23:23:52 INFO ⏰ UTC Time: 2026-02-02T15:23:52.252569+00:00
+2026-02-02 23:23:52 INFO ======================================================================
+2026-02-02 23:23:52 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:23:52 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:23:52 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 23:23:52 INFO Secret stored: db_password1 (encrypted in memory)
+2026-02-02 23:24:01 INFO ======================================================================
+2026-02-02 23:24:01 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 23:24:01 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 23:24:01 INFO 🌐 Environment: production
+2026-02-02 23:24:01 INFO ⏰ UTC Time: 2026-02-02T15:24:01.885253+00:00
+2026-02-02 23:24:01 INFO ======================================================================
+2026-02-02 23:24:01 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:24:01 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:24:01 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 23:24:01 INFO Secret stored: db_password1 (encrypted in memory)
+2026-02-02 23:26:27 INFO ======================================================================
+2026-02-02 23:26:27 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-02 23:26:27 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-02 23:26:27 INFO 🌐 Environment: production
+2026-02-02 23:26:27 INFO ⏰ UTC Time: 2026-02-02T15:26:27.359483+00:00
+2026-02-02 23:26:27 INFO ======================================================================
+2026-02-02 23:26:27 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:26:27 INFO ✓ Encryption initialized from .secret_key
+2026-02-02 23:26:27 INFO Secret stored: db_password (encrypted in memory)
+2026-02-02 23:26:27 INFO Secret stored: db_password1 (encrypted in memory)
+2026-02-04 23:08:45 INFO ======================================================================
+2026-02-04 23:08:45 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-04 23:08:45 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-04 23:08:45 INFO 🌐 Environment: production
+2026-02-04 23:08:45 INFO ⏰ UTC Time: 2026-02-04T15:08:45.112622+00:00
+2026-02-04 23:08:45 INFO ======================================================================
+2026-02-04 23:08:45 INFO TestDataGenerator initialized
+2026-02-04 23:08:45 INFO Starting batch generation of 1000 records
+2026-02-04 23:08:45 INFO Successfully generated 1000 records
+2026-02-04 23:08:45 INFO Exported 1000 record(s) to JSON: output\users.json
+2026-02-04 23:08:45 INFO Exported 1000 records to CSV: output\users.csv
+2026-02-04 23:08:45 INFO Starting async batch generation of 500 records (concurrency=20)
+2026-02-04 23:08:45 INFO Successfully generated 500 records asynchronously
+2026-02-04 23:08:45 INFO Exported 500 record(s) to JSON: output\orders.json
+2026-02-04 23:08:45 INFO Exported 500 records to CSV: output\orders.csv
+2026-02-05 22:33:15 INFO ======================================================================
+2026-02-05 22:33:15 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:33:15 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:33:15 INFO 🌐 Environment: production
+2026-02-05 22:33:15 INFO ⏰ UTC Time: 2026-02-05T14:33:15.444400+00:00
+2026-02-05 22:33:15 INFO ======================================================================
+2026-02-05 22:33:15 INFO TestDataManager initialized with data dir: E:\Code\auto_ui_api\logs\test_data
+2026-02-05 22:34:21 INFO ======================================================================
+2026-02-05 22:34:21 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:34:21 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:34:21 INFO 🌐 Environment: production
+2026-02-05 22:34:21 INFO ⏰ UTC Time: 2026-02-05T14:34:21.845042+00:00
+2026-02-05 22:34:21 INFO ======================================================================
+2026-02-05 22:36:05 INFO ======================================================================
+2026-02-05 22:36:05 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:36:05 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:36:05 INFO 🌐 Environment: production
+2026-02-05 22:36:05 INFO ⏰ UTC Time: 2026-02-05T14:36:05.913495+00:00
+2026-02-05 22:36:05 INFO ======================================================================
+2026-02-05 22:41:29 INFO ======================================================================
+2026-02-05 22:41:29 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:41:29 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:41:29 INFO 🌐 Environment: dev
+2026-02-05 22:41:29 INFO ⏰ UTC Time: 2026-02-05T14:41:29.212943+00:00
+2026-02-05 22:41:29 INFO ======================================================================
+2026-02-05 22:43:24 INFO ======================================================================
+2026-02-05 22:43:24 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:43:24 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:43:24 INFO 🌐 Environment: dev
+2026-02-05 22:43:24 INFO ⏰ UTC Time: 2026-02-05T14:43:24.493699+00:00
+2026-02-05 22:43:24 INFO ======================================================================
+2026-02-05 22:43:34 INFO ======================================================================
+2026-02-05 22:43:34 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:43:34 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:43:34 INFO 🌐 Environment: dev
+2026-02-05 22:43:34 INFO ⏰ UTC Time: 2026-02-05T14:43:34.655938+00:00
+2026-02-05 22:43:34 INFO ======================================================================
+2026-02-05 22:43:35 INFO Navigate to: https://www.baidu.com
+2026-02-05 22:43:35 INFO Page loaded in 0.22s
+2026-02-05 22:46:37 INFO ======================================================================
+2026-02-05 22:46:37 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:46:37 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:46:37 INFO 🌐 Environment: dev
+2026-02-05 22:46:37 INFO ⏰ UTC Time: 2026-02-05T14:46:37.061434+00:00
+2026-02-05 22:46:37 INFO ======================================================================
+2026-02-05 22:46:37 INFO Navigate to: https://www.baidu.com
+2026-02-05 22:46:38 INFO Page loaded in 0.23s
+2026-02-05 22:47:43 INFO ======================================================================
+2026-02-05 22:47:43 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:47:43 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:47:43 INFO 🌐 Environment: dev
+2026-02-05 22:47:43 INFO ⏰ UTC Time: 2026-02-05T14:47:43.003180+00:00
+2026-02-05 22:47:43 INFO ======================================================================
+2026-02-05 22:47:43 INFO Navigate to: https://www.baidu.com
+2026-02-05 22:47:44 INFO Page loaded in 0.22s
+2026-02-05 22:50:26 INFO ======================================================================
+2026-02-05 22:50:26 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:50:26 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:50:26 INFO 🌐 Environment: dev
+2026-02-05 22:50:26 INFO ⏰ UTC Time: 2026-02-05T14:50:26.432034+00:00
+2026-02-05 22:50:26 INFO ======================================================================
+2026-02-05 22:50:30 INFO ======================================================================
+2026-02-05 22:50:30 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:50:30 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:50:30 INFO 🌐 Environment: dev
+2026-02-05 22:50:30 INFO ⏰ UTC Time: 2026-02-05T14:50:30.700697+00:00
+2026-02-05 22:50:30 INFO ======================================================================
+2026-02-05 22:50:31 INFO Navigate to: https://www.baidu.com
+2026-02-05 22:50:32 INFO Page loaded in 0.55s
+2026-02-05 22:50:41 INFO ======================================================================
+2026-02-05 22:50:41 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-05 22:50:41 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-05 22:50:41 INFO 🌐 Environment: dev
+2026-02-05 22:50:41 INFO ⏰ UTC Time: 2026-02-05T14:50:41.566761+00:00
+2026-02-05 22:50:41 INFO ======================================================================
+2026-02-05 22:50:42 INFO Navigate to: https://www.baidu.com
+2026-02-05 22:50:42 INFO Page loaded in 0.60s
+2026-02-06 22:09:35 INFO ======================================================================
+2026-02-06 22:09:35 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-06 22:09:35 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-06 22:09:35 INFO 🌐 Environment: dev
+2026-02-06 22:09:35 INFO ⏰ UTC Time: 2026-02-06T14:09:35.141368+00:00
+2026-02-06 22:09:35 INFO ======================================================================
+2026-02-06 22:09:36 INFO Navigate to: https://www.baidu.com
+2026-02-06 22:09:37 INFO Page loaded in 0.89s
+2026-02-06 22:14:08 INFO ======================================================================
+2026-02-06 22:14:08 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-06 22:14:08 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-06 22:14:08 INFO 🌐 Environment: dev
+2026-02-06 22:14:08 INFO ⏰ UTC Time: 2026-02-06T14:14:08.560890+00:00
+2026-02-06 22:14:08 INFO ======================================================================
+2026-02-06 22:14:09 INFO Navigate to: https://www.baidu.com
+2026-02-06 22:14:11 INFO Page loaded in 2.54s
+2026-02-06 22:14:26 INFO ======================================================================
+2026-02-06 22:14:26 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-06 22:14:26 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-06 22:14:26 INFO 🌐 Environment: dev
+2026-02-06 22:14:26 INFO ⏰ UTC Time: 2026-02-06T14:14:26.684621+00:00
+2026-02-06 22:14:26 INFO ======================================================================
+2026-02-06 22:14:27 INFO Navigate to: https://www.baidu.com
+2026-02-06 22:14:30 INFO Page loaded in 2.52s
+2026-02-06 22:15:54 INFO ======================================================================
+2026-02-06 22:15:54 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-06 22:15:54 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-06 22:15:54 INFO 🌐 Environment: dev
+2026-02-06 22:15:54 INFO ⏰ UTC Time: 2026-02-06T14:15:54.219157+00:00
+2026-02-06 22:15:54 INFO ======================================================================
+2026-02-06 22:15:54 INFO TestDataGenerator initialized
+2026-02-06 22:15:54 INFO Starting batch generation of 1000 records
+2026-02-06 22:15:54 INFO Successfully generated 1000 records
+2026-02-06 22:15:54 INFO Exported 1000 record(s) to JSON: E:\Code\auto_ui_api\output\users.json
+2026-02-06 22:15:54 INFO Exported 1000 records to CSV: E:\Code\auto_ui_api\output\users.csv
+2026-02-06 22:15:54 INFO Starting async batch generation of 500 records (concurrency=20)
+2026-02-06 22:15:54 INFO Successfully generated 500 records asynchronously
+2026-02-06 22:15:54 INFO Exported 500 record(s) to JSON: E:\Code\auto_ui_api\output\orders.json
+2026-02-06 22:15:54 INFO Exported 500 records to CSV: E:\Code\auto_ui_api\output\orders.csv
+2026-02-06 22:17:45 INFO ======================================================================
+2026-02-06 22:17:45 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-06 22:17:45 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-06 22:17:45 INFO 🌐 Environment: dev
+2026-02-06 22:17:45 INFO ⏰ UTC Time: 2026-02-06T14:17:45.755625+00:00
+2026-02-06 22:17:45 INFO ======================================================================
+2026-02-06 22:17:46 INFO Navigate to: https://www.baidu.com
+2026-02-06 22:17:49 INFO Page loaded in 2.63s
+2026-02-06 22:18:48 INFO ======================================================================
+2026-02-06 22:18:48 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-06 22:18:48 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-06 22:18:48 INFO 🌐 Environment: dev
+2026-02-06 22:18:48 INFO ⏰ UTC Time: 2026-02-06T14:18:48.795871+00:00
+2026-02-06 22:18:48 INFO ======================================================================
+2026-02-06 22:18:49 INFO Navigate to: https://www.baidu.com
+2026-02-06 22:18:52 INFO Page loaded in 2.65s
+2026-02-06 22:18:52 INFO {'search_input': {'exists': True, 'visible': True, 'enabled': True, 'debug_info': {'strategy': 'css', 'context': 'page', 'attempts': [{'strategy': 'css', 'value': '#chat-textarea'}], 'exists': True, 'visible': True}}, 'search_button': {'exists': True, 'visible': True, 'enabled': True, 'debug_info': {'strategy': 'get_by_role+name', 'context': 'page', 'attempts': [{'strategy': 'role', 'value': ('button', '百度一下')}], 'exists': True, 'visible': True}}, 'logo': {'exists': True, 'debug_info': {'error': 'Locator.is_visible: Error: strict mode violation: get_by_role("img") resolved to 11 elements:\n    1) <img class="s-top-tab-image tab-image-one" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDIiIGhlaWdodD0iMTUiIHZpZXdCb3g9IjAgMCA0MiAxNSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeT0iMC4yMTQyMzMiIHdpZHRoPSIxNC41NzE0IiBoZWlnaHQ9IjE0LjU3MTQiIHJ4PSI3LjI4NTcxIiBmaWxsPSJ3aGl0ZSIvPgo8cmVjdCB5PSIwLjIxNDIzMyIgd2lkdGg9IjE0LjU3MTQiIGhlaWdodD0iMTQuNTcxNCIgcng9IjcuMjg1NzEiIGZpbGw9InVybCgjcGFpbnQwX2xpbmVhcl8xMjVfMTkzODApIi8+CjxwYXRoIGQ9Ik04LjQyNjE2IDguNzEwOTdDOC40MjYxNiA4LjM5NjAyI…/> aka locator("#csaitab")\n    2) <img width="270" height="129" usemap="#mp" id="s_lg_img" hidefocus="true" class="index-logo-src" src="//www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png" onerror="this.src=\'//www.baidu.com/img/flexible/logo/pc/index.png\';this.onerror=null;"/> aka locator("#s_lg_img")\n    3) <img src="https://psstatic.cdn.bcebos.com/basics/aichat/wenwenxin_127_1769511848000.png"/> aka get_by_role("img").nth(2)\n    4) <svg width="77" height="42" viewBox="0 0 77 42" xmlns="http://www.w3.org/2000/svg" class="svg_2cDwx ai-search-btn-svg_vi_CZ">…</svg> aka locator("#left-tool svg")\n    5) <svg width="20" height="20" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">…</svg> aka locator("#voice-input-wrapper").get_by_role("img")\n    6) <svg width="20" height="20" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">…</svg> aka get_by_role("img").nth(5)\n    7) <svg width="20" height="20" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">…</svg> aka locator("svg").nth(4)\n    8) <svg width="4" height="4" class="svg_2cDwx" viewBox="0 0 4 4" xmlns="http://www.w3.org/2000/svg">…</svg> aka get_by_role("link", name="复杂问题就找文心助手 👉 立即体验")\n    9) <img class="more-dropdown-trigger-icon" src="https://psstatic.cdn.bcebos.com/aife/static/more-menu_1756807326000.svg"/> aka locator(".more-dropdown-trigger-icon")\n    10) <img id="up-top" class="icon up-top-icon" src="https://psstatic.cdn.bcebos.com/basics/aichat/to-up-newer_1766568454000.svg"/> aka locator("#up-top")\n    ...\n\nCall log:\n    - checking visibility of get_by_role("img")\n', 'type': 'Error'}}}
+2026-02-07 22:48:42 INFO ======================================================================
+2026-02-07 22:48:42 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 22:48:42 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 22:48:42 INFO 🌐 Environment: dev
+2026-02-07 22:48:42 INFO ⏰ UTC Time: 2026-02-07T14:48:42.538834+00:00
+2026-02-07 22:48:42 INFO ======================================================================
+2026-02-07 22:48:55 INFO ======================================================================
+2026-02-07 22:48:55 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 22:48:55 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 22:48:55 INFO 🌐 Environment: dev
+2026-02-07 22:48:55 INFO ⏰ UTC Time: 2026-02-07T14:48:55.075794+00:00
+2026-02-07 22:48:55 INFO ======================================================================
+2026-02-07 23:03:18 INFO ======================================================================
+2026-02-07 23:03:18 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:03:18 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:03:18 INFO 🌐 Environment: dev
+2026-02-07 23:03:18 INFO ⏰ UTC Time: 2026-02-07T15:03:18.281034+00:00
+2026-02-07 23:03:18 INFO ======================================================================
+2026-02-07 23:03:27 INFO ======================================================================
+2026-02-07 23:03:27 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:03:27 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:03:27 INFO 🌐 Environment: dev
+2026-02-07 23:03:27 INFO ⏰ UTC Time: 2026-02-07T15:03:27.768598+00:00
+2026-02-07 23:03:27 INFO ======================================================================
+2026-02-07 23:04:14 INFO ======================================================================
+2026-02-07 23:04:14 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:04:14 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:04:14 INFO 🌐 Environment: dev
+2026-02-07 23:04:14 INFO ⏰ UTC Time: 2026-02-07T15:04:14.872621+00:00
+2026-02-07 23:04:14 INFO ======================================================================
+2026-02-07 23:06:39 INFO ======================================================================
+2026-02-07 23:06:39 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:06:39 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:06:39 INFO 🌐 Environment: dev
+2026-02-07 23:06:39 INFO ⏰ UTC Time: 2026-02-07T15:06:39.926035+00:00
+2026-02-07 23:06:39 INFO ======================================================================
+2026-02-07 23:07:35 INFO ======================================================================
+2026-02-07 23:07:35 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:07:35 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:07:35 INFO 🌐 Environment: dev
+2026-02-07 23:07:35 INFO ⏰ UTC Time: 2026-02-07T15:07:35.535080+00:00
+2026-02-07 23:07:35 INFO ======================================================================
+2026-02-07 23:08:03 INFO ======================================================================
+2026-02-07 23:08:03 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:08:03 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:08:03 INFO 🌐 Environment: dev
+2026-02-07 23:08:03 INFO ⏰ UTC Time: 2026-02-07T15:08:03.211098+00:00
+2026-02-07 23:08:03 INFO ======================================================================
+2026-02-07 23:08:03 WARNING 跳过非列表组 'llm_model' in E:\Code\auto_ui_api\test_data\login_page.yaml
+2026-02-07 23:11:52 INFO ======================================================================
+2026-02-07 23:11:52 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:11:52 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:11:52 INFO 🌐 Environment: dev
+2026-02-07 23:11:52 INFO ⏰ UTC Time: 2026-02-07T15:11:52.667338+00:00
+2026-02-07 23:11:52 INFO ======================================================================
+2026-02-07 23:12:10 INFO ======================================================================
+2026-02-07 23:12:10 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:12:10 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:12:10 INFO 🌐 Environment: dev
+2026-02-07 23:12:10 INFO ⏰ UTC Time: 2026-02-07T15:12:10.936046+00:00
+2026-02-07 23:12:10 INFO ======================================================================
+2026-02-07 23:13:02 INFO ======================================================================
+2026-02-07 23:13:02 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:13:02 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:13:02 INFO 🌐 Environment: dev
+2026-02-07 23:13:02 INFO ⏰ UTC Time: 2026-02-07T15:13:02.888511+00:00
+2026-02-07 23:13:02 INFO ======================================================================
+2026-02-07 23:13:02 WARNING 跳过无效组 'input_text'（类型: str）in E:\Code\auto_ui_api\test_data\login_page.yaml
+2026-02-07 23:13:29 INFO ======================================================================
+2026-02-07 23:13:29 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-07 23:13:29 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-07 23:13:29 INFO 🌐 Environment: dev
+2026-02-07 23:13:29 INFO ⏰ UTC Time: 2026-02-07T15:13:29.778091+00:00
+2026-02-07 23:13:29 INFO ======================================================================
+2026-02-07 23:13:29 WARNING 跳过无效组 'input_text'（类型: str）in E:\Code\auto_ui_api\test_data\login_page.yaml
+2026-02-08 19:11:57 INFO ======================================================================
+2026-02-08 19:11:57 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-08 19:11:57 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-08 19:11:57 INFO 🌐 Environment: dev
+2026-02-08 19:11:57 INFO ⏰ UTC Time: 2026-02-08T11:11:57.151801+00:00
+2026-02-08 19:11:57 INFO ======================================================================
+2026-02-08 19:11:57 WARNING 跳过无效组 'input_text'（类型: str）in E:\Code\auto_ui_api\test_data\login_page.yaml
+2026-02-13 20:12:11 INFO ======================================================================
+2026-02-13 20:12:11 INFO ✅ Logger initialized: automation | Level: INFO
+2026-02-13 20:12:11 INFO 📁 Log directory: E:\Code\auto_ui_api\logs
+2026-02-13 20:12:11 INFO 🌐 Environment: dev
+2026-02-13 20:12:11 INFO ⏰ UTC Time: 2026-02-13T12:12:11.241580+00:00
+2026-02-13 20:12:11 INFO ======================================================================
+2026-02-13 20:12:11 INFO TestDataManager initialized with data dir: E:\Code\auto_ui_api\logs\test_data

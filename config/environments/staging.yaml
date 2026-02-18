@@ -1,0 +1,24 @@
+# 预发布环境配置
+base_url: "https://staging.example.com"
+api_base_url: "https://api-staging.example.com"
+
+
+
+timeouts:
+  page_load: 30000  # 标准超时
+
+# 预发布特定配置
+performance_thresholds:
+  max_response_time: 2000 # 毫秒
+  min_throughput: 5     # 请求/秒
+  max_error_rate: 0.01  # 1%
+
+# 安全配置
+security:
+  enable_ssl_verification: true
+  custom_ca_bundle: "/etc/ssl/certs/ca-certificates.crt"
+
+# 资源限制
+resource_limits:
+  max_concurrent_tests: 4
+  max_memory_per_test: 256 # MB

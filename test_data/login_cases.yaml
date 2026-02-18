@@ -1,0 +1,16 @@
+valid_login:
+  id: "happy_path"
+  username: "alice"
+  password: "secure123"
+  expected: 200
+
+invalid_cases:
+  - id: "empty_password"
+    username: "bob"
+    password: ""
+    expected: 401
+
+  - id: "wrong_password"
+    username: "charlie"
+    password: "wrong"
+    expected: 401

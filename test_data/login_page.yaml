@@ -1,0 +1,28 @@
+login_page_case:
+  - username: ""
+    password: "password_"
+    expected_error: "用户名不能为空"
+
+  - username: "new_username"
+    password: "password_"
+    expected_error: null
+
+llm_model_case:
+  - input_text: ""
+    expected_entities: [ ]
+    expected_relations: [ ]
+    model: "llm-v3"
+
+  - input_text: "苹果公司由史蒂夫·乔布斯创立。"
+    expected_entities: [ "苹果公司", "史蒂夫·乔布斯" ]
+    expected_relations: [ [ "史蒂夫·乔布斯", "创立", "苹果公司" ] ]
+    model: "llm-v3"
+
+llm_model:
+  input_text: ""
+  expected_entities: [ ]
+  expected_relations: [ ]
+  model: "llm-v3"
+
+#input_text: "" #错误示例
+#expected_entities: [] #错误示例
