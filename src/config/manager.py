@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, Field
 # 现在使用绝对导入
-from config.sources.env_loader import EnvLoader
-from config.sources.yaml_loader import YamlLoader
+from .env_loader import EnvLoader
+from .yaml_loader import YamlLoader
 
 PROJECT_ROOT = Path.cwd().resolve().parent
 

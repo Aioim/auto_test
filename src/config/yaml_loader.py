@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict
 import yaml
-PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+from config._path import PROJECT_ROOT
 
 class YamlLoader:
     """YAML配置加载器"""

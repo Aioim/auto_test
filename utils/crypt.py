@@ -311,9 +311,9 @@ if __name__ == '__main__':
     # # 创建安全目录
     # # envcrypt_dir = Path.home() / ".envcrypt"  # 或项目内 .envcrypt/
     # # envcrypt_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-    #
+    from config import PROJECT_ROOT
     # # 保存密钥（同样 600 权限）
-    key_path = settings.project_root / ".key"
+    key_path = PROJECT_ROOT/ ".key"
     # EnvCrypt.save_key(key, key_path)
     #
     # print(f"✓ 密钥保存至: {key_path}")

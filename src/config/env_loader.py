@@ -1,13 +1,12 @@
-# framework/config/sources/env_loader.py
 """
 环境变量加载器
 负责从系统环境和.env文件加载配置
 """
 import os
-from pathlib import Path
 from typing import Any, Dict
 from dotenv import load_dotenv
-PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+from config._path import PROJECT_ROOT
+
 
 class EnvLoader:
     """环境变量加载器"""
