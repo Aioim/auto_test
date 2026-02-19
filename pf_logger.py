@@ -1,4 +1,2 @@
-from config import PROJECT_ROOT
-
-if __name__=='__main__':
-    print(PROJECT_ROOT)
+from PIL import Image
+print(Image.__version__)

@@ -14,23 +14,14 @@ from typing import Optional, Union, List, Dict, Any, Generator
 from datetime import datetime
 from pathlib import Path
 from enum import Enum
-import logging
+from utils.logger import logger
 from contextlib import contextmanager
 
 from playwright.sync_api import Page, Locator, ElementHandle
-
-# Allure 导入容错处理
-try:
-    import allure
-
-    _ALLURE_AVAILABLE = True
-except ImportError:
-    _ALLURE_AVAILABLE = False
-    allure = None  # type: ignore
+import allure
 
 from config import settings
 
-logger = logging.getLogger(__name__)
 
 
 # ==================== 常量定义 ====================
@@ -197,7 +188,7 @@ class ScreenshotHelper:
         self.screenshot_dir = Path(screenshot_dir or self.DEFAULT_SCREENSHOT_DIR).resolve()
         self.auto_cleanup = auto_cleanup
         self.max_screenshots = max_screenshots
-        self.enable_allure = enable_allure and _ALLURE_AVAILABLE
+        self.enable_allure = enable_allure 
 
         # 确保目录存在（安全创建）
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
@@ -650,8 +641,6 @@ class ScreenshotHelper:
                 **kwargs
             )
 
-    # ==================== 标注功能（明确未实现） ====================
-
     def annotate_screenshot(
             self,
             name: Optional[str] = None,
@@ -661,13 +650,107 @@ class ScreenshotHelper:
         """
         截取带标注的截图
 
+        注意：此功能需要安装 PIL/Pillow 库。
+
+        Args:
+            name: 截图名称
+            annotations: 标注信息列表，每个标注包含以下字段：
+                - type: 标注类型（text, arrow, rectangle）
+                - text: 标注文本（仅 text 类型）
+                - position: 位置 (x, y) 或 (x1, y1, x2, y2)（根据类型）
+                - color: 标注颜色
+                - size: 字体大小（仅 text 类型）
+            **kwargs: 其他参数
+
+        Returns:
+            ScreenshotMetadata: 截图元数据
+
         Raises:
-            NotImplementedError: 功能尚未实现
+            ImportError: 缺少 PIL/Pillow 库
+            ValueError: 参数无效
         """
-        raise NotImplementedError(
-            "Annotation feature is not implemented. "
-            "Consider using external tools like PIL/Pillow for post-processing annotations."
+        if not _PIL_AVAILABLE:
+            raise ImportError(
+                "Annotation feature requires PIL/Pillow library. "
+                "Please install it with 'pip install Pillow'."
+            )
+
+        # 首先截取基础截图
+        base_metadata = self.take_screenshot(
+            name=name or "annotated_screenshot",
+            screenshot_type=ScreenshotType.VIEWPORT,
+            **kwargs
         )
+
+        # 打开截图并添加标注
+        image_path = Path(base_metadata.filepath)
+        with Image.open(image_path) as img:
+            draw = ImageDraw.Draw(img)
+
+            # 处理标注
+            if annotations:
+                for annotation in annotations:
+                    annot_type = annotation.get("type", "text")
+                    color = annotation.get("color", "red")
+
+                    if annot_type == "text":
+                        # 添加文本标注
+                        text = annotation.get("text", "")
+                        position = annotation.get("position", (10, 10))
+                        size = annotation.get("size", 12)
+                        
+                        # 尝试加载字体，失败则使用默认字体
+                        try:
+                            font = ImageFont.truetype("arial.ttf", size)
+                        except:
+                            font = ImageFont.load_default()
+                        
+                        draw.text(position, text, fill=color, font=font)
+
+                    elif annot_type == "arrow":
+                        # 添加箭头标注
+                        position = annotation.get("position", (0, 0, 100, 100))
+                        if len(position) == 4:
+                            x1, y1, x2, y2 = position
+                            draw.line([(x1, y1), (x2, y2)], fill=color, width=2)
+                            # 添加箭头头部
+                            arrow_size = 10
+                            angle = np.arctan2(y2 - y1, x2 - x1)
+                            draw.line([(x2, y2), (x2 - arrow_size * np.cos(angle - np.pi/6), y2 - arrow_size * np.sin(angle - np.pi/6))], fill=color, width=2)
+                            draw.line([(x2, y2), (x2 - arrow_size * np.cos(angle + np.pi/6), y2 - arrow_size * np.sin(angle + np.pi/6))], fill=color, width=2)
+
+                    elif annot_type == "rectangle":
+                        # 添加矩形标注
+                        position = annotation.get("position", (0, 0, 100, 100))
+                        if len(position) == 4:
+                            draw.rectangle(position, outline=color, width=2)
+
+            # 保存带标注的截图
+            img.save(image_path)
+
+        # 更新元数据
+        updated_metadata = ScreenshotMetadata(
+            name=base_metadata.name,
+            filepath=str(image_path),
+            screenshot_type=ScreenshotType.ANNOTATED,
+            timestamp=time.time(),
+            url=self.page.url,
+            title=self.page.title(),
+            viewport=base_metadata.viewport,
+            size=image_path.stat().st_size,
+            annotations=annotations
+        )
+
+        # 更新历史记录
+        if self._history:
+            self._history[-1] = updated_metadata
+
+        # Allure 集成
+        if self.enable_allure:
+            self._attach_to_allure(image_path, base_metadata.name, updated_metadata)
+
+        logger.info(f"Annotated screenshot saved: {image_path}")
+        return updated_metadata
 
     # ==================== 截图管理 ====================
 
@@ -800,11 +883,6 @@ class ScreenshotHelper:
             name: str,
             metadata: ScreenshotMetadata
     ) -> None:
-        """将截图附加到 Allure 报告（带容错）"""
-        if not self.enable_allure or not _ALLURE_AVAILABLE or allure is None:
-            if self.enable_allure:
-                logger.warning("Allure integration requested but module not available")
-            return
 
         try:
             # 读取截图数据
@@ -1076,7 +1154,7 @@ if __name__=='__main__':
 
         # 截取特定元素
         helper.take_element_screenshot(
-            selector="#main-content",
+            selector="#s_lg_img",
             name="main_content"
         )
 

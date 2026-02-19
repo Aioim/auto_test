@@ -4,28 +4,15 @@
 提供图像比较、差异分析和视觉回归测试功能
 """
 import os
-# 尝试导入cv2，使其成为可选依赖
-try:
-    import cv2
-    CV2_AVAILABLE = True
-except ImportError:
-    cv2 = None
-    CV2_AVAILABLE = False
-# 尝试导入numpy，使其成为可选依赖
-try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except ImportError:
-    np = None
-    NUMPY_AVAILABLE = False
+import cv2
+import numpy as np
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple, List
-import logging
 from enum import Enum
 
-from src.config import settings
+from config import settings
+from utils.logger import logger
 
-logger = logging.getLogger(__name__)
 
 
 class ComparisonAlgorithm(Enum):
@@ -99,23 +86,7 @@ class VisualValidator:
         Returns:
             Dict[str, Any]: 验证结果，包含相似度、是否通过、差异图像路径等
         """
-        # 检查cv2和numpy是否可用
-        if not CV2_AVAILABLE or not NUMPY_AVAILABLE:
-            missing_libs = []
-            if not CV2_AVAILABLE:
-                missing_libs.append("cv2")
-            if not NUMPY_AVAILABLE:
-                missing_libs.append("numpy")
-            logger.error(f"{', '.join(missing_libs)}库不可用，无法进行视觉验证")
-            return {
-                "success": False,
-                "message": f"{', '.join(missing_libs)}库不可用，无法进行视觉验证",
-                "similarity": 0.0,
-                "threshold": threshold or self.threshold,
-                "test_image": None,
-                "baseline_image": None,
-                "diff_image": None
-            }
+       
             
         # 使用默认值
         if not baseline_image_name:
@@ -519,10 +490,10 @@ def update_baseline(
 
 if __name__ == "__main__":
     """示例用法"""
-    validator = VisualValidator()
+    validator = VisualValidator(test_dir="output\screenshots", baseline_dir="screenshots")
     
     # 验证单个图像
-    result = validator.validate("test_viewport.png")
+    result = validator.validate("quick_shot.png")
     print(f"验证结果: {result}")
     
     # 验证整个目录

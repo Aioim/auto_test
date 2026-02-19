@@ -5,26 +5,11 @@ from typing import Optional, Any, List, Tuple, Dict, Union, Literal
 import logging
 import json
 import time
-# 尝试导入allure，使其成为可选依赖
-try:
-    import allure
-    ALLURE_AVAILABLE = True
-except ImportError:
-    allure = None
-    ALLURE_AVAILABLE = False
+import allure
+from playwright.sync_api import Page, Locator, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-# 尝试导入playwright，使其成为可选依赖
-try:
-    from playwright.sync_api import Page, Locator, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
-    PLAYWRIGHT_AVAILABLE = True
-except ImportError:
-    Page = None
-    Locator = None
-    PlaywrightTimeoutError = Exception
-    PlaywrightError = Exception
-    PLAYWRIGHT_AVAILABLE = False
-from src.config import settings
-from src.config.locators_i18n import get_text as i18n_get_text
+from config import settings
+from config.locators_i18n import get_text as i18n_get_text
 
 logger = logging.getLogger(__name__)
 
