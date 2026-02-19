@@ -21,7 +21,14 @@ src/utils/__init__.py
 src/utils/crypt.py
 src/utils/logger.py
 src/utils/screenshot_helper.py
+src/utils/screenshot_helper_copy.py
 src/utils/selector_helper.py
+src/utils/common/__init__.py
+src/utils/common/log_monitor.py
+src/utils/common/screenshot_helper.py
+src/utils/common/selector_helper.py
+src/utils/common/verify_security_log.py
+src/utils/common/visual_validator.py
 src/utils/data/__init__.py
 src/utils/data/data_faker.py
 src/utils/data/data_loader.py
@@ -45,3 +52,4 @@ src/utils/security/key_rotation.py
 src/utils/security/secret_str.py
 src/utils/security/secrets_manager.py
 tests/test_login.py
+tests/test_screenshot_helper.py
