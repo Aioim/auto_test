@@ -1,0 +1,7 @@
+.secret_key
+*.pyc
+__pycache__/
+*.log
+.env*
+output/
+auto_test_egg-info/

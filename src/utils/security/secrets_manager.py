@@ -26,14 +26,14 @@ from cryptography.exceptions import InvalidSignature
 
 from utils.logger import logger, security_logger
 from utils.security.secret_str import SecretStr
-from config._path import PROJECT_ROOT
-print('PROJECT_ROOT:',PROJECT_ROOT)
+from config import PROJECT_ROOT
+print(PROJECT_ROOT)
 # ==================== 安全配置 ====================
 
 class SecurityConfig:
     """安全配置集中管理"""
     # 密钥文件路径
-    KEY_FILE: Final[Path] = PROJECT_ROOT / "config" / "secrets" / ".secret_key"
+    KEY_FILE: Final[Path] = PROJECT_ROOT / "environments" / ".secret_key"
 
     # Fernet 密钥必须为 44 字节 URL 安全 base64
     KEY_LENGTH: Final[int] = 44

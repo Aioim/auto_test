@@ -1,0 +1,253 @@
+2026-02-18 20:01:29 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 20:01:29 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 20:01:29 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 20:01:29 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 20:01:29 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T12:01:29.865214+00:00
+2026-02-18 20:01:29 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 20:01:51 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 20:01:51 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 20:01:51 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 20:01:51 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 20:01:51 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T12:01:51.771715+00:00
+2026-02-18 20:01:51 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 20:02:17 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 20:02:17 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 20:02:17 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 20:02:17 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 20:02:17 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T12:02:17.835359+00:00
+2026-02-18 20:02:17 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 20:02:55 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 20:02:55 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 20:02:55 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 20:02:55 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 20:02:55 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T12:02:55.930560+00:00
+2026-02-18 20:02:55 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 20:03:21 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 20:03:21 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 20:03:21 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 20:03:21 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 20:03:21 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T12:03:21.711073+00:00
+2026-02-18 20:03:21 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 20:03:42 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 20:03:42 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 20:03:42 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 20:03:42 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 20:03:42 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T12:03:42.808890+00:00
+2026-02-18 20:03:42 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 20:05:15 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 20:05:15 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 20:05:15 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 20:05:15 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 20:05:15 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T12:05:15.621816+00:00
+2026-02-18 20:05:15 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 20:05:15 WARNING [security:secrets:_handle_missing_key:197] 
+⚠️  AUTO-GENERATED DEVELOPMENT KEY
+   Location: E:\Code\auto_test\src\utils\config\secrets\.secret_key
+   ⚠️  CRITICAL: Add to .gitignore IMMEDIATELY:
+        echo '.secret_key' >> .gitignore
+
+2026-02-18 22:45:33 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:45:33 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:45:33 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:45:33 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:45:33 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:45:33.383720+00:00
+2026-02-18 22:45:33 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:49:45 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:49:45 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:49:45 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:49:45 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:49:45 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:49:45.385920+00:00
+2026-02-18 22:49:45 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:50:17 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:50:17 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:50:17 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:50:17 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:50:17 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:50:17.058720+00:00
+2026-02-18 22:50:17 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:50:59 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:50:59 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:50:59 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:50:59 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:50:59 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:50:59.256843+00:00
+2026-02-18 22:50:59 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:52:09 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:52:09 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:52:09 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:52:09 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:52:09 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:52:09.944603+00:00
+2026-02-18 22:52:09 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:52:09 INFO [automation:data_faker:__init__:36] TestDataGenerator initialized
+2026-02-18 22:52:09 INFO [automation:data_faker:batch_generate:195] Starting batch generation of 1000 records
+2026-02-18 22:52:10 INFO [automation:data_faker:batch_generate:206] Successfully generated 1000 records
+2026-02-18 22:52:10 INFO [automation:data_faker:export_to_json:266] Exported 1000 record(s) to JSON: E:\Code\auto_test\output\data_faker\users.json
+2026-02-18 22:52:10 INFO [automation:data_faker:export_to_csv:287] Exported 1000 records to CSV: E:\Code\auto_test\output\data_faker\users.csv
+2026-02-18 22:52:10 INFO [automation:data_faker:batch_generate_async:218] Starting async batch generation of 500 records (concurrency=20)
+2026-02-18 22:52:10 INFO [automation:data_faker:batch_generate_async:237] Successfully generated 500 records asynchronously
+2026-02-18 22:52:10 INFO [automation:data_faker:export_to_json:266] Exported 500 record(s) to JSON: E:\Code\auto_test\output\data_faker\orders.json
+2026-02-18 22:52:10 INFO [automation:data_faker:export_to_csv:287] Exported 500 records to CSV: E:\Code\auto_test\output\data_faker\orders.csv
+2026-02-18 22:52:22 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:52:22 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:52:22 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:52:22 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:52:22 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:52:22.499560+00:00
+2026-02-18 22:52:22 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:52:36 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:52:36 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:52:36 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:52:36 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:52:36 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:52:36.167147+00:00
+2026-02-18 22:52:36 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:53:30 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:53:30 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:53:30 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:53:30 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:53:30 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:53:30.522794+00:00
+2026-02-18 22:53:30 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:54:24 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 22:54:24 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 22:54:24 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 22:54:24 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 22:54:24 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T14:54:24.013847+00:00
+2026-02-18 22:54:24 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 22:54:25 INFO [automation:base_page:goto:76] Navigate to: https://www.baidu.com
+2026-02-18 22:54:26 INFO [automation:base_page:goto:82] Page loaded in 0.80s
+2026-02-18 22:54:26 INFO [automation:baidu_page:<module>:138] {'search_input': {'exists': True, 'visible': True, 'enabled': True, 'debug_info': {'strategy': 'css', 'context': 'page', 'attempts': [{'strategy': 'css', 'value': '#chat-textarea'}], 'exists': True, 'visible': True}}, 'search_button': {'exists': True, 'visible': True, 'enabled': True, 'debug_info': {'strategy': 'get_by_role+name', 'context': 'page', 'attempts': [{'strategy': 'role', 'value': ('button', '百度一下')}], 'exists': True, 'visible': True}}, 'logo': {'exists': True, 'debug_info': {'error': 'Locator.is_visible: Error: strict mode violation: get_by_role("img") resolved to 10 elements:\n    1) <img class="s-top-tab-image tab-image-one" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAE4AAAAqCAYAAAAdz21RAAAACXBIWXMAACE4AAAhOAFFljFgAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAr8SURBVHgB7VrvblTXEZ85e9fgFIr9BCxPAOoLYPq9wqB+QGlS26lS5UvLmhCUSlW9/hYpDV43UdsPLWyltEVqJZwXKOsnCDwByxOwDiYGe++Zzjkz59xz94+9u04kFHlgfe/ee/7O39/MWYATOqETOqEfLiEcg27UXzQI8A/oB+J/7g8Bmcz89Ms/zrbhDaHbt3tXgfIt4xbI6+MPuvuZs9l8o4FdmIIMHJfIc5//k2Oa/w69HrxZRDtyIfdBuSV41YU5mJKOzTjHNHJSDF+OpcPfDyFSt1iW8A2OSdnPfvvyKmKviV5pWIe9vRVTo…/> aka locator("#csaitab")\n    2) <img width="270" height="129" usemap="#mp" id="s_lg_img" hidefocus="true" class="index-logo-src" src="//search-operate.cdn.bcebos.com/b89032f94f2364a0b32cf2af8868ca14.gif" onerror="this.src=\'//www.baidu.com/img/flexible/logo/pc/index.png\';this.onerror=null;"/> aka locator("#s_lg_img")\n    3) <img src="https://psstatic.cdn.bcebos.com/basics/aichat/wenwenxin_127_1769511848000.png"/> aka get_by_role("img").nth(2)\n    4) <svg width="77" height="42" viewBox="0 0 77 42" xmlns="http://www.w3.org/2000/svg" class="svg_2cDwx ai-search-btn-svg_vi_CZ">…</svg> aka locator("#left-tool svg")\n    5) <svg width="20" height="20" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">…</svg> aka locator("#voice-input-wrapper").get_by_role("img")\n    6) <svg width="20" height="20" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">…</svg> aka get_by_role("img").nth(5)\n    7) <svg width="20" height="20" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">…</svg> aka locator("svg").nth(4)\n    8) <img src="https://psstatic.cdn.bcebos.com/aife/static/wenxinlogo_1770695621000.png"/> aka get_by_role("link", name="复杂问题就找文心助手，深入思考回答更优\ue6dc")\n    9) <img id="up-top" class="icon up-top-icon" src="https://psstatic.cdn.bcebos.com/basics/aichat/to-up-newer_1766568454000.svg"/> aka locator("#up-top")\n    10) <img class="icon" src="https://pss.bdstatic.com/static/superman/img/qrcode/qrcode@2x-daf987ad02.png"/> aka locator(".qrcode-layer > .icon")\n\nCall log:\n    - checking visibility of get_by_role("img")\n', 'type': 'Error'}}}
+2026-02-18 23:11:28 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:11:28 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:11:28 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:11:28 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:11:28 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:11:28.319191+00:00
+2026-02-18 23:11:28 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:11:50 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:11:50 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:11:50 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:11:50 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:11:50 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:11:50.950558+00:00
+2026-02-18 23:11:50 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:12:49 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:12:49 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:12:49 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:12:49 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:12:49 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:12:49.141739+00:00
+2026-02-18 23:12:49 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:12:58 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:12:58 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:12:58 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:12:58 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:12:58 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:12:58.829000+00:00
+2026-02-18 23:12:58 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:13:27 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:13:27 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:13:27 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:13:27 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:13:27 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:13:27.962294+00:00
+2026-02-18 23:13:27 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:13:27 WARNING [security:secrets:_handle_missing_key:196] 
+⚠️  AUTO-GENERATED DEVELOPMENT KEY
+   Location: E:\Code\auto_test\config\secrets\.secret_key
+   ⚠️  CRITICAL: Add to .gitignore IMMEDIATELY:
+        echo '.secret_key' >> .gitignore
+
+2026-02-18 23:13:35 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:13:35 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:13:35 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:13:35 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:13:35 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:13:35.891758+00:00
+2026-02-18 23:13:35 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:14:17 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:14:17 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:14:17 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:14:17 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:14:17 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:14:17.575544+00:00
+2026-02-18 23:14:17 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:14:17 INFO [security:secrets:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:15:01 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:15:01 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:15:01 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:15:01 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:15:01 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:15:01.844524+00:00
+2026-02-18 23:15:01 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:15:08 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:15:08 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:15:08 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:15:08 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:15:08 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:15:08.360290+00:00
+2026-02-18 23:15:08 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:15:20 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:15:20 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:15:20 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:15:20 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:15:20 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:15:20.437652+00:00
+2026-02-18 23:15:20 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:15:50 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:15:50 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:15:50 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:15:50 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:15:50 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:15:50.299077+00:00
+2026-02-18 23:15:50 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:15:50 INFO [security:secrets:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:16:13 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:16:13 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:16:13 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:16:13 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:16:13 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:16:13.231445+00:00
+2026-02-18 23:16:13 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:18:09 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:18:09 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:18:09 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:18:09 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:18:09 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:18:09.708319+00:00
+2026-02-18 23:18:09 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:18:09 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:18:24 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:18:24 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:18:24 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:18:24 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:18:24 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:18:24.961276+00:00
+2026-02-18 23:18:24 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:18:24 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:18:49 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:18:49 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:18:49 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:18:49 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:18:49 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:18:49.851558+00:00
+2026-02-18 23:18:49 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:18:49 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:18:58 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:18:58 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:18:58 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:18:58 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:18:58 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:18:58.603091+00:00
+2026-02-18 23:18:58 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:18:58 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:19:29 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:19:29 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:19:29 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:19:29 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:19:29 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:19:29.486121+00:00
+2026-02-18 23:19:29 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:19:29 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:19:29 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:22:03 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:22:03 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:22:03 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:22:03 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:22:03 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:22:03.938027+00:00
+2026-02-18 23:22:03 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:22:03 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:22:28 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:22:28 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:22:28 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:22:28 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:22:28 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:22:28.448289+00:00
+2026-02-18 23:22:28 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:22:28 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:22:56 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:22:58 INFO [automation:logger:setup_logger:577] ======================================================================
+2026-02-18 23:22:58 INFO [automation:logger:setup_logger:578] ✅ Logger initialized: automation | Level: INFO
+2026-02-18 23:22:58 INFO [automation:logger:setup_logger:579] 📁 Log directory: E:\Code\auto_test\logs
+2026-02-18 23:22:58 INFO [automation:logger:setup_logger:580] 🌐 Environment: dev
+2026-02-18 23:22:58 INFO [automation:logger:setup_logger:581] ⏰ UTC Time: 2026-02-18T15:22:58.371316+00:00
+2026-02-18 23:22:58 INFO [automation:logger:setup_logger:582] ======================================================================
+2026-02-18 23:22:58 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
+2026-02-18 23:22:58 INFO [security:secrets_manager:__init__:136] ✓ Encryption initialized from .secret_key
