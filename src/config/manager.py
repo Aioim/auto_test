@@ -172,8 +172,8 @@ class AppConfig(_SettingsBase):
     selector_strategy: str = "lenient"  # strict/lenient
     resource_cleanup_timeout: int = 5
 
-    # path
-    project_root: Path = PROJECT_ROOT
+    # 截图输出路径
+    SCREENSHOT_DIR: Path = PROJECT_ROOT / "output/screenshots"
     # 添加模型配置
     model_config = ConfigDict(protected_namespaces=())
 

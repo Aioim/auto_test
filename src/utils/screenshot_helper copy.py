@@ -10,24 +10,27 @@ import base64
 import time
 import warnings
 import re
-import sys
 from typing import Optional, Union, List, Dict, Any, Generator
 from datetime import datetime
 from pathlib import Path
 from enum import Enum
+import logging
 from contextlib import contextmanager
 
-# 必须导入playwright
 from playwright.sync_api import Page, Locator, ElementHandle
 
-# 必须导入allure
-import allure
+# Allure 导入容错处理
+try:
+    import allure
+
+    _ALLURE_AVAILABLE = True
+except ImportError:
+    _ALLURE_AVAILABLE = False
+    allure = None  # type: ignore
 
 from config import settings
 
-# 使用 LazyLogger 来获取日志实例，确保只初始化一次
-from utils.logger import setup_logger
-logger = setup_logger(__name__, log_to_console=False)
+logger = logging.getLogger(__name__)
 
 
 # ==================== 常量定义 ====================
@@ -66,7 +69,7 @@ _HIGHLIGHT_CLASS = "__screenshot_helper_highlight__"
 
 # JavaScript 逻辑解耦
 _HIGHLIGHT_JS = """
-({element, borderStyle, shadowBlur, className}) => {
+(element, borderStyle, shadowBlur, className) => {
     if (!element || !element.isConnected) return false;
     
     // 保存原始样式
@@ -194,48 +197,15 @@ class ScreenshotHelper:
         self.screenshot_dir = Path(screenshot_dir or self.DEFAULT_SCREENSHOT_DIR).resolve()
         self.auto_cleanup = auto_cleanup
         self.max_screenshots = max_screenshots
-        self.enable_allure = enable_allure
+        self.enable_allure = enable_allure and _ALLURE_AVAILABLE
 
         # 确保目录存在（安全创建）
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
 
         # 截图历史记录
         self._history: List[ScreenshotMetadata] = []
-        
-        # 选择器缓存，避免重复创建相同的 Locator
-        self._locator_cache: Dict[str, Locator] = {}
-
-        # 版本兼容性检查
-        self._check_compatibility()
 
         logger.debug(f"ScreenshotHelper initialized: {self.screenshot_dir}")
-
-    def _check_compatibility(self) -> None:
-        """
-        检查版本兼容性
-
-        确保当前环境和 Playwright 版本与本工具兼容
-        """
-        try:
-            # 检查 Playwright 版本
-            import playwright
-            playwright_version = getattr(playwright, '__version__', 'unknown')
-            logger.debug(f"Playwright version: {playwright_version}")
-        
-            # 检查 Python 版本
-            python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-            logger.debug(f"Python version: {python_version}")
-            
-            # 检查关键 API 可用性
-            if not hasattr(self.page, 'screenshot'):
-                logger.warning("Page.screenshot() method not available, some features may not work")
-            
-            if not hasattr(self.page, 'evaluate'):
-                logger.warning("Page.evaluate() method not available, some features may not work")
-                
-        except Exception as e:
-            logger.warning(f"Compatibility check failed: {e}")
-            # 继续执行，只是发出警告
 
     # ==================== 安全工具方法 ====================
 
@@ -286,59 +256,6 @@ class ScreenshotHelper:
 
         处理所有截图类型分发、高亮上下文、异常安全清理
         """
-        try:
-            # 准备截图选项
-            screenshot_options = self._prepare_screenshot_options(
-                format=format,
-                quality=quality,
-                timeout=timeout,
-                **kwargs
-            )
-
-            # 根据截图类型执行不同的截图逻辑
-            if screenshot_type == ScreenshotType.FULL_PAGE:
-                return self._capture_full_page_screenshot(screenshot_options)
-
-            elif screenshot_type == ScreenshotType.VIEWPORT:
-                return self._capture_viewport_screenshot(screenshot_options)
-
-            elif screenshot_type in (ScreenshotType.ELEMENT, ScreenshotType.HIGHLIGHTED, ScreenshotType.ELEMENTS):
-                return self._capture_element_screenshot(
-                    screenshot_type=screenshot_type,
-                    selector=selector,
-                    timeout=timeout,
-                    screenshot_options=screenshot_options
-                )
-
-            elif screenshot_type == ScreenshotType.ANNOTATED:
-                return self._capture_annotated_screenshot(screenshot_options)
-
-            else:
-                raise ValueError(f"Unsupported screenshot type: {screenshot_type}")
-
-        except Exception as e:
-            logger.error(f"Screenshot capture failed (type={screenshot_type.value}): {e}", exc_info=True)
-            raise
-
-    def _prepare_screenshot_options(
-            self,
-            format: ScreenshotFormat,
-            quality: Optional[int],
-            timeout: Optional[int],
-            **kwargs
-    ) -> Dict[str, Any]:
-        """
-        准备截图选项
-
-        Args:
-            format: 截图格式
-            quality: 截图质量
-            timeout: 超时时间
-            **kwargs: 其他截图选项
-
-        Returns:
-            Dict[str, Any]: 截图选项字典
-        """
         timeout = timeout or self.DEFAULT_TIMEOUT
         screenshot_options: Dict[str, Any] = {
             "type": format.value,
@@ -350,290 +267,51 @@ class ScreenshotHelper:
         if format in (ScreenshotFormat.JPEG, ScreenshotFormat.WEBP):
             screenshot_options["quality"] = quality if quality is not None else self.DEFAULT_QUALITY
 
-        return screenshot_options
-
-    def _capture_full_page_screenshot(self, screenshot_options: Dict[str, Any]) -> bytes:
-        """
-        截取完整页面截图
-
-        Args:
-            screenshot_options: 截图选项
-
-        Returns:
-            bytes: 截图数据
-        """
-        screenshot_options["full_page"] = True
-        return self.page.screenshot(**screenshot_options)
-
-    def _capture_viewport_screenshot(self, screenshot_options: Dict[str, Any]) -> bytes:
-        """
-        截取可视区域截图
-
-        Args:
-            screenshot_options: 截图选项
-
-        Returns:
-            bytes: 截图数据
-        """
-        screenshot_options["full_page"] = False
-        return self.page.screenshot(**screenshot_options)
-
-    def _capture_element_screenshot(
-            self,
-            screenshot_type: ScreenshotType,
-            selector: Optional[Union[Locator, str, ElementHandle]],
-            timeout: Optional[int],
-            screenshot_options: Dict[str, Any]
-    ) -> bytes:
-        """
-        截取元素截图
-
-        Args:
-            screenshot_type: 截图类型
-            selector: 元素选择器
-            timeout: 超时时间
-            screenshot_options: 截图选项
-
-        Returns:
-            bytes: 截图数据
-
-        Raises:
-            ValueError: 缺少选择器
-        """
-        if selector is None:
-            raise ValueError("selector is required for element screenshot")
-
-        # 解析选择器
-        locator = self._resolve_locator(selector) if not isinstance(selector, ElementHandle) else None
-        element = selector if isinstance(selector, ElementHandle) else locator.element_handle(timeout=timeout)
-
-        # 高亮上下文管理（仅 HIGHLIGHTED 类型）
-        @contextmanager
-        def highlight_ctx():
-            cleanup = False
-            try:
-                if screenshot_type == ScreenshotType.HIGHLIGHTED:
-                    self._highlight_element_handle(element, timeout=timeout)
-                    cleanup = True
-                    # 使用 Playwright 原生等待替代 time.sleep
-                    self.page.wait_for_timeout(self.HIGHLIGHT_WAIT_MS)
-                yield
-            finally:
-                if cleanup:
-                    self.remove_highlight(timeout=timeout)
-
-        with highlight_ctx():
-            return element.screenshot(**screenshot_options)
-
-    def _capture_annotated_screenshot(self, screenshot_options: Dict[str, Any]) -> bytes:
-        """
-        截取带标注的截图
-
-        Args:
-            screenshot_options: 截图选项
-
-        Returns:
-            bytes: 截图数据
-        """
-        # 提取标注信息
-        annotations = screenshot_options.pop('annotations', [])
-        
-        # 添加临时标注元素
-        annotation_elements = []
         try:
-            # 添加标注元素到页面
-            for annotation in annotations:
-                element = self._add_annotation_element(annotation)
-                if element:
-                    annotation_elements.append(element)
-            
-            # 等待标注元素渲染
-            self.page.wait_for_timeout(100)
-            
-            # 截取完整页面截图
-            screenshot_options["full_page"] = True
-            return self.page.screenshot(**screenshot_options)
-        finally:
-            # 清理标注元素
-            for element in annotation_elements:
-                try:
-                    element.remove()
-                except Exception:
-                    pass
+            if screenshot_type == ScreenshotType.FULL_PAGE:
+                screenshot_options["full_page"] = True
+                return self.page.screenshot(**screenshot_options)
 
-    def _add_annotation_element(self, annotation: Dict[str, Any]) -> Optional[ElementHandle]:
-        """
-        添加标注元素到页面
+            elif screenshot_type == ScreenshotType.VIEWPORT:
+                screenshot_options["full_page"] = False
+                return self.page.screenshot(**screenshot_options)
 
-        Args:
-            annotation: 标注信息
+            elif screenshot_type in (ScreenshotType.ELEMENT, ScreenshotType.HIGHLIGHTED, ScreenshotType.ELEMENTS):
+                if selector is None:
+                    raise ValueError("selector is required for element screenshot")
 
-        Returns:
-            Optional[ElementHandle]: 添加的标注元素
-        """
-        annotation_type = annotation.get('type', 'text')
-        
-        if annotation_type == 'text':
-            return self._add_text_annotation(annotation)
-        elif annotation_type == 'arrow':
-            return self._add_arrow_annotation(annotation)
-        elif annotation_type == 'rectangle':
-            return self._add_rectangle_annotation(annotation)
-        else:
-            logger.warning(f"Unsupported annotation type: {annotation_type}")
-            return None
+                # 解析选择器
+                locator = self._resolve_locator(selector) if not isinstance(selector, ElementHandle) else None
+                element = selector if isinstance(selector, ElementHandle) else locator.element_handle(timeout=timeout)
 
-    def _add_text_annotation(self, annotation: Dict[str, Any]) -> Optional[ElementHandle]:
-        """
-        添加文本标注
+                # 高亮上下文管理（仅 HIGHLIGHTED 类型）
+                @contextmanager
+                def highlight_ctx():
+                    cleanup = False
+                    try:
+                        if screenshot_type == ScreenshotType.HIGHLIGHTED:
+                            self._highlight_element_handle(element, timeout=timeout)
+                            cleanup = True
+                            # 使用 Playwright 原生等待替代 time.sleep
+                            self.page.wait_for_timeout(self.HIGHLIGHT_WAIT_MS)
+                        yield
+                    finally:
+                        if cleanup:
+                            self.remove_highlight(timeout=timeout)
 
-        Args:
-            annotation: 文本标注信息
+                with highlight_ctx():
+                    return element.screenshot(**screenshot_options)
 
-        Returns:
-            Optional[ElementHandle]: 添加的文本标注元素
-        """
-        text = annotation.get('text', '')
-        x = annotation.get('x', 10)
-        y = annotation.get('y', 10)
-        color = annotation.get('color', 'red')
-        font_size = annotation.get('font_size', 14)
-        
-        try:
-            # 创建文本标注元素
-            element = self.page.evaluate_handle('''
-                ({text, x, y, color, font_size}) => {
-                    const div = document.createElement('div');
-                    div.style.position = 'fixed';
-                    div.style.left = `${x}px`;
-                    div.style.top = `${y}px`;
-                    div.style.color = color;
-                    div.style.fontSize = `${font_size}px`;
-                    div.style.fontWeight = 'bold';
-                    div.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-                    div.style.padding = '4px 8px';
-                    div.style.borderRadius = '4px';
-                    div.style.zIndex = '999999';
-                    div.style.pointerEvents = 'none';
-                    div.textContent = text;
-                    document.body.appendChild(div);
-                    return div;
-                }
-            ''', {
-                'text': text,
-                'x': x,
-                'y': y,
-                'color': color,
-                'font_size': font_size
-            })
-            return element
+            elif screenshot_type == ScreenshotType.ANNOTATED:
+                raise NotImplementedError(
+                    "Annotation feature is not implemented yet. Use external tools for annotations.")
+
+            else:
+                raise ValueError(f"Unsupported screenshot type: {screenshot_type}")
+
         except Exception as e:
-            logger.warning(f"Failed to add text annotation: {e}")
-            return None
-
-    def _add_arrow_annotation(self, annotation: Dict[str, Any]) -> Optional[ElementHandle]:
-        """
-        添加箭头标注
-
-        Args:
-            annotation: 箭头标注信息
-
-        Returns:
-            Optional[ElementHandle]: 添加的箭头标注元素
-        """
-        x1 = annotation.get('x1', 10)
-        y1 = annotation.get('y1', 10)
-        x2 = annotation.get('x2', 100)
-        y2 = annotation.get('y2', 100)
-        color = annotation.get('color', 'red')
-        thickness = annotation.get('thickness', 2)
-        
-        try:
-            # 创建箭头标注元素
-            element = self.page.evaluate_handle('''
-                ({x1, y1, x2, y2, color, thickness}) => {
-                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    svg.style.position = 'fixed';
-                    svg.style.left = '0';
-                    svg.style.top = '0';
-                    svg.style.width = '100vw';
-                    svg.style.height = '100vh';
-                    svg.style.pointerEvents = 'none';
-                    svg.style.zIndex = '999999';
-                    
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', x1);
-                    line.setAttribute('y1', y1);
-                    line.setAttribute('x2', x2);
-                    line.setAttribute('y2', y2);
-                    line.setAttribute('stroke', color);
-                    line.setAttribute('stroke-width', thickness);
-                    
-                    svg.appendChild(line);
-                    document.body.appendChild(svg);
-                    return svg;
-                }
-            ''', {
-                'x1': x1,
-                'y1': y1,
-                'x2': x2,
-                'y2': y2,
-                'color': color,
-                'thickness': thickness
-            })
-            return element
-        except Exception as e:
-            logger.warning(f"Failed to add arrow annotation: {e}")
-            return None
-
-    def _add_rectangle_annotation(self, annotation: Dict[str, Any]) -> Optional[ElementHandle]:
-        """
-        添加矩形标注
-
-        Args:
-            annotation: 矩形标注信息
-
-        Returns:
-            Optional[ElementHandle]: 添加的矩形标注元素
-        """
-        x = annotation.get('x', 10)
-        y = annotation.get('y', 10)
-        width = annotation.get('width', 100)
-        height = annotation.get('height', 100)
-        color = annotation.get('color', 'red')
-        thickness = annotation.get('thickness', 2)
-        opacity = annotation.get('opacity', 0.3)
-        
-        try:
-            # 创建矩形标注元素
-            element = self.page.evaluate_handle('''
-                ({x, y, width, height, color, thickness, opacity}) => {
-                    const div = document.createElement('div');
-                    div.style.position = 'fixed';
-                    div.style.left = `${x}px`;
-                    div.style.top = `${y}px`;
-                    div.style.width = `${width}px`;
-                    div.style.height = `${height}px`;
-                    div.style.border = `${thickness}px solid ${color}`;
-                    div.style.backgroundColor = `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`;
-                    div.style.pointerEvents = 'none';
-                    div.style.zIndex = '999999';
-                    document.body.appendChild(div);
-                    return div;
-                }
-            ''', {
-                'x': x,
-                'y': y,
-                'width': width,
-                'height': height,
-                'color': color,
-                'thickness': thickness,
-                'opacity': opacity
-            })
-            return element
-        except Exception as e:
-            logger.warning(f"Failed to add rectangle annotation: {e}")
-            return None
+            logger.error(f"Screenshot capture failed (type={screenshot_type.value}): {e}", exc_info=True)
+            raise
 
     # ==================== 公共截图 API ====================
 
@@ -684,8 +362,11 @@ class ScreenshotHelper:
             )
             screenshot_type = ScreenshotType.FULL_PAGE if full_page else ScreenshotType.VIEWPORT
 
-        # 生成安全文件名和路径
-        name = self._generate_screenshot_filename(name)
+        # 生成安全文件名
+        if not name:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+            name = f"screenshot_{timestamp}"
+
         ext = format.value
         filepath = self._get_safe_filepath(name, ext)
 
@@ -701,105 +382,45 @@ class ScreenshotHelper:
                 **kwargs
             )
 
-            # 创建元数据
-            metadata = self._create_screenshot_metadata(
+            # 创建元数据（使用 Playwright API 获取可靠信息）
+            metadata = ScreenshotMetadata(
                 name=name,
-                filepath=filepath,
+                filepath=str(filepath),
                 screenshot_type=screenshot_type,
-                data=data
+                timestamp=time.time(),
+                url=self.page.url,
+                title=self.page.title(),  # Playwright Page 必有 title() 方法
+                viewport={
+                    "width": self.page.viewport_size["width"],
+                    "height": self.page.viewport_size["height"]
+                },
+                size=len(data),
+                annotations=[] if screenshot_type != ScreenshotType.ANNOTATED else None
             )
 
-            # 处理后续操作
-            self._process_screenshot_post_capture(metadata)
+            # 记录历史
+            self._history.append(metadata)
+
+            # 自动清理旧截图
+            if self.auto_cleanup and len(self._history) > self.max_screenshots:
+                self._cleanup_old_screenshots()
+
+            # Allure 集成
+            if self.enable_allure:
+                self._attach_to_allure(filepath, name, metadata)
 
             logger.info(f"Screenshot saved: {filepath} ({len(data)} bytes)")
             return metadata
 
         except Exception as e:
             # 清理残留文件（截图失败时）
-            self._cleanup_failed_screenshot(filepath)
+            if filepath.exists():
+                try:
+                    filepath.unlink()
+                    logger.debug(f"Cleaned up failed screenshot: {filepath}")
+                except Exception as cleanup_err:
+                    logger.warning(f"Failed to clean up failed screenshot {filepath}: {cleanup_err}")
             raise
-
-    def _generate_screenshot_filename(self, name: Optional[str]) -> str:
-        """
-        生成截图文件名
-
-        Args:
-            name: 自定义截图名称
-
-        Returns:
-            str: 生成的截图文件名
-        """
-        if not name:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-            return f"screenshot_{timestamp}"
-        return name
-
-    def _create_screenshot_metadata(
-            self,
-            name: str,
-            filepath: Path,
-            screenshot_type: ScreenshotType,
-            data: bytes
-    ) -> ScreenshotMetadata:
-        """
-        创建截图元数据
-
-        Args:
-            name: 截图名称
-            filepath: 截图文件路径
-            screenshot_type: 截图类型
-            data: 截图数据
-
-        Returns:
-            ScreenshotMetadata: 截图元数据
-        """
-        return ScreenshotMetadata(
-            name=name,
-            filepath=str(filepath),
-            screenshot_type=screenshot_type,
-            timestamp=time.time(),
-            url=self.page.url,
-            title=self.page.title(),
-            viewport={
-                "width": self.page.viewport_size["width"],
-                "height": self.page.viewport_size["height"]
-            },
-            size=len(data),
-            annotations=[] if screenshot_type != ScreenshotType.ANNOTATED else None
-        )
-
-    def _process_screenshot_post_capture(self, metadata: ScreenshotMetadata) -> None:
-        """
-        处理截图后的操作
-
-        Args:
-            metadata: 截图元数据
-        """
-        # 记录历史
-        self._history.append(metadata)
-
-        # 自动清理旧截图
-        if self.auto_cleanup and len(self._history) > self.max_screenshots:
-            self._cleanup_old_screenshots()
-
-        # Allure 集成
-        if self.enable_allure:
-            self._attach_to_allure(Path(metadata.filepath), metadata.name, metadata)
-
-    def _cleanup_failed_screenshot(self, filepath: Path) -> None:
-        """
-        清理失败的截图文件
-
-        Args:
-            filepath: 截图文件路径
-        """
-        if filepath.exists():
-            try:
-                filepath.unlink()
-                logger.debug(f"Cleaned up failed screenshot: {filepath}")
-            except Exception as cleanup_err:
-                logger.warning(f"Failed to clean up failed screenshot {filepath}: {cleanup_err}")
 
     def take_element_screenshot(
             self,
@@ -857,21 +478,38 @@ class ScreenshotHelper:
         注意：ElementHandle.is_visible() 不支持 timeout 参数
         """
         try:
-            # 安全检查：元素是否有效且可见
-            if not self._is_element_valid(element):
+            # 安全检查 1：元素是否仍在 DOM 中
+            try:
+                is_connected = element.evaluate("element => element ? element.isConnected : false")
+                if not is_connected:
+                    logger.warning("Element is not connected to DOM, skipping highlight")
+                    return False
+            except Exception as e:
+                logger.warning(f"Element handle invalid or disconnected: {e}")
                 return False
+
+            # 安全检查 2：元素是否可见（无 timeout 参数）
+            # 注意：ElementHandle.is_visible() 可能抛出异常（元素已移除/失效）
+            try:
+                # ⚠️ 无 timeout 参数！这是与 Locator 的关键区别
+                if not element.is_visible():
+                    logger.debug("Element not visible, but still applying highlight for debugging purposes")
+                    # 仍继续高亮（调试场景可能需要高亮不可见元素）
+            except Exception as e:
+                # 元素可能在检查期间被移除
+                logger.debug(f"Visibility check failed (element may have been detached): {e}")
+                # 仍尝试高亮（调试友好）
+                pass
 
             # 应用高亮样式
             border_style = f"{thickness}px {style} {color}"
 
             result = self.page.evaluate(
                 _HIGHLIGHT_JS,
-                {
-                    "element": element,
-                    "borderStyle": border_style,
-                    "shadowBlur": _HIGHLIGHT_SHADOW_BLUR,
-                    "className": _HIGHLIGHT_CLASS
-                }
+                element,
+                border_style,
+                _HIGHLIGHT_SHADOW_BLUR,
+                _HIGHLIGHT_CLASS
             )
             if result:
                 logger.debug(f"Element highlighted with {border_style}")
@@ -880,80 +518,6 @@ class ScreenshotHelper:
         except Exception as e:
             logger.warning(f"Failed to highlight element: {e}")
             return False
-
-    def _is_element_valid(self, element: ElementHandle) -> bool:
-        """
-        检查元素是否有效（在 DOM 中且可操作）
-
-        Args:
-            element: 元素句柄
-
-        Returns:
-            bool: 元素是否有效
-        """
-        # 安全检查 1：元素是否仍在 DOM 中
-        try:
-            is_connected = element.evaluate("element => element ? element.isConnected : false")
-            if not is_connected:
-                logger.warning("Element is not connected to DOM, skipping highlight")
-                return False
-        except Exception as e:
-            logger.warning(f"Element handle invalid or disconnected: {e}")
-            return False
-
-        # 安全检查 2：元素是否可见（无 timeout 参数）
-        # 注意：ElementHandle.is_visible() 可能抛出异常（元素已移除/失效）
-        try:
-            # ⚠️ 无 timeout 参数！这是与 Locator 的关键区别
-            if not element.is_visible():
-                logger.debug("Element not visible, but still applying highlight for debugging purposes")
-                # 仍继续高亮（调试场景可能需要高亮不可见元素）
-        except Exception as e:
-            # 元素可能在检查期间被移除
-            logger.debug(f"Visibility check failed (element may have been detached): {e}")
-            # 仍尝试高亮（调试友好）
-            pass
-
-        # 安全检查 3：元素是否在视口内
-        try:
-            is_in_viewport = element.evaluate('''
-                element => {
-                    const rect = element.getBoundingClientRect();
-                    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-                    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-                    return (
-                        rect.left >= 0 &&
-                        rect.top >= 0 &&
-                        rect.right <= viewportWidth &&
-                        rect.bottom <= viewportHeight
-                    );
-                }
-            ''')
-            if not is_in_viewport:
-                logger.debug("Element not in viewport, but still applying highlight for debugging purposes")
-                # 仍继续高亮（调试场景可能需要高亮视口外元素）
-        except Exception as e:
-            logger.debug(f"Viewport check failed: {e}")
-            # 仍尝试高亮（调试友好）
-            pass
-
-        # 安全检查 4：元素尺寸是否有效
-        try:
-            size_valid = element.evaluate('''
-                element => {
-                    const rect = element.getBoundingClientRect();
-                    return rect.width > 0 && rect.height > 0;
-                }
-            ''')
-            if not size_valid:
-                logger.debug("Element has zero size, but still applying highlight for debugging purposes")
-                # 仍继续高亮（调试场景可能需要高亮零尺寸元素）
-        except Exception as e:
-            logger.debug(f"Size check failed: {e}")
-            # 仍尝试高亮（调试友好）
-            pass
-
-        return True
 
     def highlight_element(
             self,
@@ -1097,19 +661,12 @@ class ScreenshotHelper:
         """
         截取带标注的截图
 
-        Args:
-            name: 截图名称
-            annotations: 标注信息列表
-            **kwargs: 其他参数
-
-        Returns:
-            ScreenshotMetadata: 截图元数据
+        Raises:
+            NotImplementedError: 功能尚未实现
         """
-        return self.take_screenshot(
-            name=name,
-            screenshot_type=ScreenshotType.ANNOTATED,
-            annotations=annotations or [],
-            **kwargs
+        raise NotImplementedError(
+            "Annotation feature is not implemented. "
+            "Consider using external tools like PIL/Pillow for post-processing annotations."
         )
 
     # ==================== 截图管理 ====================
@@ -1229,28 +786,11 @@ class ScreenshotHelper:
     # ==================== 工具方法 ====================
 
     def _resolve_locator(self, selector: Union[Locator, str]) -> Locator:
-        """
-        解析选择器为 Locator
-
-        Args:
-            selector: Locator 对象或选择器字符串
-
-        Returns:
-            Locator: 解析后的 Locator 对象
-
-        Raises:
-            ValueError: 不支持的选择器类型
-        """
+        """解析选择器为 Locator"""
         if isinstance(selector, Locator):
             return selector
         elif isinstance(selector, str):
-            # 检查缓存中是否已有对应的 Locator
-            if selector not in self._locator_cache:
-                # 创建新的 Locator 并缓存
-                self._locator_cache[selector] = self.page.locator(selector)
-                logger.debug(f"Cached new locator for selector: {selector}")
-            # 从缓存返回 Locator
-            return self._locator_cache[selector]
+            return self.page.locator(selector)
         else:
             raise ValueError(f"Unsupported selector type: {type(selector)}")
 
@@ -1260,77 +800,52 @@ class ScreenshotHelper:
             name: str,
             metadata: ScreenshotMetadata
     ) -> None:
-        """
-        将截图附加到 Allure 报告（带容错）
-
-        Args:
-            filepath: 截图文件路径
-            name: 截图名称
-            metadata: 截图元数据
-        """
-        if not self.enable_allure:
+        """将截图附加到 Allure 报告（带容错）"""
+        if not self.enable_allure or not _ALLURE_AVAILABLE or allure is None:
+            if self.enable_allure:
+                logger.warning("Allure integration requested but module not available")
             return
 
         try:
-            # 检查文件是否存在
-            if not filepath.exists():
-                logger.warning(f"Screenshot file not found for Allure attachment: {filepath}")
-                return
-
             # 读取截图数据
-            try:
-                with open(filepath, 'rb') as f:
-                    file_data = f.read()
-            except Exception as e:
-                logger.warning(f"Failed to read screenshot file for Allure attachment: {e}")
-                return
+            with open(filepath, 'rb') as f:
+                file_data = f.read()
 
             # 确定附件类型 - 安全处理 Allure 枚举缺失的类型
-            try:
-                ext = filepath.suffix.lower()
-                if ext in ('.jpg', '.jpeg'):
-                    # 容错：JPG/JPEG 枚举名称因版本而异
-                    attachment_type = getattr(allure.attachment_type, 'JPG',
-                                              getattr(allure.attachment_type, 'JPEG', 'image/jpeg'))
-                elif ext == '.png':
-                    attachment_type = allure.attachment_type.PNG
-                elif ext == '.gif':
-                    attachment_type = allure.attachment_type.GIF
-                elif ext == '.webp':
-                    # Allure 无 WEBP 枚举，直接使用 MIME 类型字符串
-                    attachment_type = "image/webp"
-                elif ext == '.bmp':
-                    attachment_type = allure.attachment_type.BMP
-                elif ext == '.svg':
-                    attachment_type = allure.attachment_type.SVG
-                else:
-                    # 未知格式回退到 PNG
-                    attachment_type = allure.attachment_type.PNG
-            except Exception as e:
-                logger.warning(f"Failed to determine attachment type for Allure: {e}")
-                # 使用默认类型
-                attachment_type = 'image/png'
+            ext = filepath.suffix.lower()
+            if ext in ('.jpg', '.jpeg'):
+                # 容错：JPG/JPEG 枚举名称因版本而异
+                attachment_type = getattr(allure.attachment_type, 'JPG',
+                                          getattr(allure.attachment_type, 'JPEG', 'image/jpeg'))
+            elif ext == '.png':
+                attachment_type = allure.attachment_type.PNG
+            elif ext == '.gif':
+                attachment_type = allure.attachment_type.GIF
+            elif ext == '.webp':
+                # Allure 无 WEBP 枚举，直接使用 MIME 类型字符串
+                attachment_type = "image/webp"
+            elif ext == '.bmp':
+                attachment_type = allure.attachment_type.BMP
+            elif ext == '.svg':
+                attachment_type = allure.attachment_type.SVG
+            else:
+                # 未知格式回退到 PNG
+                attachment_type = allure.attachment_type.PNG
 
             # 附加截图
-            try:
-                allure.attach(
-                    file_data,
-                    name=name,
-                    attachment_type=attachment_type
-                )
-            except Exception as e:
-                logger.warning(f"Failed to attach screenshot to Allure: {e}")
+            allure.attach(
+                file_data,
+                name=name,
+                attachment_type=attachment_type
+            )
 
             # 附加元数据
-            try:
-                metadata_json = json.dumps(metadata.to_dict(), ensure_ascii=False, indent=2)
-                allure.attach(
-                    metadata_json,
-                    name=f"{name}_metadata",
-                    attachment_type=allure.attachment_type.JSON
-                )
-            except Exception as e:
-                logger.warning(f"Failed to attach metadata to Allure: {e}")
+            metadata_json = json.dumps(metadata.to_dict(), ensure_ascii=False, indent=2)
+            allure.attach(
+                metadata_json,
+                name=f"{name}_metadata",
+                attachment_type=allure.attachment_type.JSON
+            )
 
             logger.debug(f"Attached screenshot to Allure: {name} (type: {attachment_type})")
 
@@ -1434,7 +949,7 @@ class ScreenshotHelper:
 
         安全处理测试名中的特殊字符
         """
-        base_dir = Path(getattr(settings, "SCREENSHOT_DIR", "output/screenshots")).resolve()
+        base_dir = Path(getattr(settings, "SCREENSHOT_DIR", "screenshots")).resolve()
 
         if test_name:
             safe_name = re.sub(r'[^\w\-_\.]', '_', test_name).strip('_')
@@ -1554,10 +1069,10 @@ if __name__=='__main__':
         helper = ScreenshotHelper(page)
 
         # 截取可视区域
-        helper.take_viewport_screenshot(name="homepage")
+        helper.take_viewport_screenshot(name="homepage1")
 
         # 截取完整页面
-        helper.take_full_page_screenshot(name="full_page")
+        helper.take_full_page_screenshot(name="full_page1")
 
         # 截取特定元素
         helper.take_element_screenshot(
@@ -1566,3 +1081,4 @@ if __name__=='__main__':
         )
 
         browser.close()
+
