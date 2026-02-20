@@ -26,8 +26,7 @@ import allure
 from config import settings
 
 # 使用 LazyLogger 来获取日志实例，确保只初始化一次
-from utils.logger import setup_logger
-logger = setup_logger(__name__, log_to_console=False)
+from utils.logger import logger
 
 
 # ==================== 常量定义 ====================
@@ -1561,8 +1560,8 @@ if __name__=='__main__':
 
         # 截取特定元素
         helper.take_element_screenshot(
-            selector="#main-content",
-            name="main_content"
+            selector="#s-hotsearch-wrapper",
+            name="main_content1"
         )
 
         browser.close()

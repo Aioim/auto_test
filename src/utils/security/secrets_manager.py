@@ -27,9 +27,8 @@ from cryptography.exceptions import InvalidSignature
 from utils.logger import logger, security_logger
 from utils.security.secret_str import SecretStr
 from config import PROJECT_ROOT
-print(PROJECT_ROOT)
-# ==================== 安全配置 ====================
 
+# ==================== 安全配置 ====================
 class SecurityConfig:
     """安全配置集中管理"""
     # 密钥文件路径

@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, replace
 from typing import Optional, Any, List, Tuple, Dict, Union, Literal
-import logging
 import json
 import time
 import allure
-from playwright.sync_api import Page, Locator, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
+from playwright.sync_api import Page, Locator, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 from config import settings
 from config.locators_i18n import get_text as i18n_get_text
-
-logger = logging.getLogger(__name__)
+from utils.logger import logger
 
 DEFAULT_WAIT_TIMEOUT = 5000  # milliseconds
 DEFAULT_RETRIES = 3
@@ -61,7 +59,6 @@ class ResolveInfo:
 # ---- Selector dataclass (V5) ----
 @dataclass(frozen=True)
 class Selector:
-    # structured locator options
     test_id: Optional[str] = None
     role: Optional[str] = None
     role_name: Optional[str] = None
@@ -104,25 +101,18 @@ class Selector:
                 logger.warning(f"Selector formatting failed for '{s}': {e}")
                 return s  # 降级返回原字符串
 
-        return Selector(
+        # Use replace for efficiency and type safety instead of __dict__ unpacking
+        return replace(
+            self,
             test_id=fmt(self.test_id),
-            role=self.role,
             role_name=fmt(self.role_name) if self.role_name else None,
-            role_name_key=self.role_name_key,
             label=fmt(self.label),
-            label_key=self.label_key,
             placeholder=fmt(self.placeholder),
             css=fmt(self.css),
             xpath=fmt(self.xpath),
             text=fmt(self.text),
-            text_key=self.text_key,
             raw_selector=fmt(self.raw_selector),
-            description=self.description,
-            deprecated=self.deprecated,
-            frame_name=self.frame_name,
-            frame_url_contains=self.frame_url_contains,
             frame_locator_css=fmt(self.frame_locator_css),
-            use_pierce=self.use_pierce,
             pierce_selector=fmt(self.pierce_selector),
             shadow_path=[fmt(p) for p in self.shadow_path if p] if self.shadow_path else None
         )
@@ -130,19 +120,12 @@ class Selector:
 
 # ---- Internal helpers ----
 
-# Frame cache to improve performance
-_frame_cache = {}
-
-
 def _localize(selector: Selector) -> Selector:
     """
     Replace key fields with localized text based on settings.locale.
-
-    使用 __dict__ 解包方式重构，避免手动列出所有字段导致遗漏风险。
+    Uses dataclasses.replace for safe immutability handling.
     """
     locale = getattr(settings, "locale", "zh")
-
-    # 仅当需要本地化时才构建更新字段
     update_fields = {}
 
     # label 本地化
@@ -165,16 +148,13 @@ def _localize(selector: Selector) -> Selector:
 
     # 仅当有字段需要更新时才创建新实例
     if update_fields:
-        return Selector(**{**selector.__dict__, **update_fields})
+        return replace(selector, **update_fields)
 
     return selector
 
 
 def _attach_to_allure(name: str, payload: Any, kind: str = "application/json"):
     """Attach structured info to Allure; defensive about failures."""
-    if not ALLURE_AVAILABLE or allure is None:
-        return
-        
     try:
         if kind == "application/json":
             content = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -185,45 +165,28 @@ def _attach_to_allure(name: str, payload: Any, kind: str = "application/json"):
         logger.debug("Allure attach failed for %s", name, exc_info=True)
 
 
-def _resolve_context(page: Page, selector: Selector) -> Tuple[Any, str]:
+def _resolve_context(page: Page, selector: Selector) -> Tuple[Union[Page, Frame, FrameLocator], str]:
     """
     Return context (Page | Frame | FrameLocator) and description.
     Raises FrameNotFoundError if requested frame cannot be found.
+    Removed global cache to prevent concurrency/page pollution issues.
     """
-    # Generate cache key based on frame identifiers
-    cache_key = (
-        selector.frame_name,
-        selector.frame_url_contains,
-        selector.frame_locator_css
-    )
-    
-    # Check cache first
-    if cache_key in _frame_cache:
-        cached_ctx, cached_desc = _frame_cache[cache_key]
-        # Validate cached context is still valid
-        if isinstance(cached_ctx, Page) or not hasattr(cached_ctx, "is_detached") or not cached_ctx.is_detached():
-            return cached_ctx, cached_desc
-    
-    # Cache miss, resolve context normally
     if selector.frame_name:
         frame = page.frame(name=selector.frame_name)
         if frame:
-            _frame_cache[cache_key] = (frame, f"frame(name={selector.frame_name})")
-            return _frame_cache[cache_key]
+            return frame, f"frame(name={selector.frame_name})"
         raise FrameNotFoundError(f"Frame with name '{selector.frame_name}' not found")
 
     if selector.frame_url_contains:
         for f in page.frames:
             if selector.frame_url_contains in (f.url or ""):
-                _frame_cache[cache_key] = (f, f"frame(url_contains={selector.frame_url_contains})")
-                return _frame_cache[cache_key]
+                return f, f"frame(url_contains={selector.frame_url_contains})"
         raise FrameNotFoundError(f"No frame with url containing '{selector.frame_url_contains}' found")
 
     if selector.frame_locator_css:
         try:
             fl = page.frame_locator(selector.frame_locator_css)
-            _frame_cache[cache_key] = (fl, f"frame_locator(css={selector.frame_locator_css})")
-            return _frame_cache[cache_key]
+            return fl, f"frame_locator(css={selector.frame_locator_css})"
         except Exception as e:
             raise FrameNotFoundError(f"FrameLocator with css '{selector.frame_locator_css}' failed: {e}")
 
@@ -245,8 +208,12 @@ def _compose_shadow_or_pierce(selector: Selector) -> Optional[str]:
                 if not isinstance(part, str):
                     logger.warning(f"Non-string shadow path part found: {part}")
                     continue
-                parts.append(f"pierce={part}" if selector.use_pierce else part)
+                # Simplified logic: prefer standard css chaining unless pierce is explicitly needed
+                # Continuous pierce= >> pierce= is often invalid in Playwright
+                parts.append(part) 
+            
             if selector.css:
+                # Combine base CSS with shadow path parts
                 return selector.css + " >> " + " >> ".join(parts)
             return " >> ".join(parts)
         except (TypeError, ValueError) as e:
@@ -260,8 +227,10 @@ def _compose_shadow_or_pierce(selector: Selector) -> Optional[str]:
 
 def _record_attempts(selector: Union[Selector, str], attempts: List[Tuple[str, Any]], ctx_desc: str):
     """Log and attach the attempts for debugging."""
+    # Only attach to Allure if debugging is likely needed (e.g. resolution failure)
+    # To reduce overhead, we primarily log to logger.debug
     info = {
-        "selector": selector.__dict__ if isinstance(selector, Selector) else str(selector),
+        "selector": asdict(selector) if isinstance(selector, Selector) else str(selector),
         "attempts": [{"strategy": s, "value": v} for s, v in attempts],
         "locale": getattr(settings, "locale", None),
         "context": ctx_desc
@@ -294,16 +263,7 @@ def _escape_css_value(value: str) -> str:
 def _try_strategy(ctx, strategy_name, strategy_func, attempts, strategy_value=None):
     """
     Try to execute a locator strategy and handle exceptions.
-    
-    Args:
-        ctx: The context (Page, Frame, or FrameLocator)
-        strategy_name: Name of the strategy being tried
-        strategy_func: Function that returns a Locator
-        attempts: List to record attempts
-        strategy_value: Optional value to record instead of function name
-    
-    Returns:
-        Tuple of (Locator, bool) where bool indicates success
+    Note: Playwright locators are lazy. This catches syntax errors, not "not found".
     """
     value_to_record = strategy_value if strategy_value is not None else strategy_func.__name__
     attempts.append((strategy_name, value_to_record))
@@ -325,15 +285,6 @@ class SelectorHelper:
     def resolve_with_meta(page: Page, selector: SelectorLike) -> Tuple[Locator, ResolveInfo]:
         """
         Resolve and return (Locator, ResolveInfo) WITHOUT waiting.
-
-        Accepts:
-          - Selector (structured; V5 includes raw_selector)
-          - str (raw locator string -> passed to page.locator)
-          - Locator (returned as-is, ResolveInfo.strategy='locator_object')
-
-        Raises:
-          - FrameNotFoundError
-          - SelectorResolutionError
         """
         # Handle Locator object case
         if isinstance(selector, Locator):
@@ -361,10 +312,6 @@ class SelectorHelper:
         attempts: List[Tuple[str, Any]] = []
 
         def ok(loc: Locator, strategy: str) -> Tuple[Locator, ResolveInfo]:
-            """
-            Create ResolveInfo and return locator.
-            """
-            # Convert attempts to structured dicts for ResolveInfo
             attempts_dicts = [{"strategy": s, "value": v} for s, v in attempts]
             info = ResolveInfo(strategy=strategy, ctx=ctx_desc, attempts=attempts_dicts)
             _record_attempts(selector, attempts, ctx_desc)
@@ -477,7 +424,6 @@ class SelectorHelper:
         _record_attempts(selector, attempts, ctx_desc)
         raise SelectorResolutionError(f"Unable to resolve locator for selector: {selector.description or selector}")
 
-    # Backwards-compatible helper that returns only Locator
     @staticmethod
     def resolve_locator(page: Page, selector: SelectorLike) -> Locator:
         loc, _meta = SelectorHelper.resolve_with_meta(page, selector)
@@ -485,18 +431,12 @@ class SelectorHelper:
 
     @staticmethod
     def _resolve_locator_object(selector: Locator) -> Tuple[Locator, ResolveInfo]:
-        """
-        Handle Locator object case.
-        """
         info = ResolveInfo(strategy="locator_object", ctx="page", attempts=[])
         logger.debug("resolve_with_meta: received Locator instance; returning as-is with metadata")
         return selector, info
 
     @staticmethod
     def _resolve_string_selector(page: Page, selector_str: str) -> Tuple[Locator, ResolveInfo]:
-        """
-        Handle string selector case.
-        """
         attempts = [("raw_string", selector_str)]
         try:
             loc = page.locator(selector_str)
@@ -516,17 +456,16 @@ class SelectorHelper:
             wait_for: Optional[
             Literal["attached", "detached", "hidden", "visible"]
         ] = None,
-            timeout: Optional[int] = None,
-            *,
-            retries: int = DEFAULT_RETRIES,
-            initial_delay: float = DEFAULT_INITIAL_DELAY,
-            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-            max_delay: float = DEFAULT_MAX_DELAY
+        timeout: Optional[int] = None,
+        *,
+        retries: int = DEFAULT_RETRIES,
+        initial_delay: float = DEFAULT_INITIAL_DELAY,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+        max_delay: float = DEFAULT_MAX_DELAY
     ) -> Locator:
         """
         Resolve locator and wait for desired state with retry/backoff.
-
-        Returns Locator on success or raises LocatorWaitTimeoutError / SelectorResolutionError / FrameNotFoundError.
+        Optimized Allure attachments: only on final failure.
         """
         timeout = timeout if timeout is not None else DEFAULT_WAIT_TIMEOUT
         attempts_info: List[Dict[str, Any]] = []
@@ -542,40 +481,30 @@ class SelectorHelper:
                 _attach_to_allure("resolution_error", {"error": str(e), "selector": str(selector)})
                 raise
 
-            # attach resolve meta for debugging
-            try:
-                _attach_to_allure("resolve_meta",
-                                  {"strategy": meta.strategy, "ctx": meta.ctx, "attempts": meta.attempts})
-            except Exception:
-                pass
-
             if not wait_for:
                 return loc
 
             try:
                 loc.wait_for(state=wait_for, timeout=timeout)
-                attempts_info.append({"attempt": attempt, "success": True, "resolve_meta": meta.__dict__})
-                _attach_to_allure("find_attempts", {"selector": str(selector), "attempts": attempts_info})
+                attempts_info.append({"attempt": attempt, "success": True, "resolve_meta": asdict(meta)})
                 return loc
             except PlaywrightTimeoutError as e:
                 last_exc = e
                 info = {"attempt": attempt, "wait_for": wait_for, "timeout_ms": timeout, "error": str(e),
-                        "resolve_meta": meta.__dict__}
+                        "resolve_meta": asdict(meta)}
                 attempts_info.append(info)
                 logger.warning("Selector wait attempt %s failed: %s", attempt, str(e))
                 if attempt >= retries:
                     break
                 delay = _calculate_backoff_delay(attempt, initial_delay, backoff_factor, max_delay)
-                _attach_to_allure("find_backoff_step",
-                                  {"selector": str(selector), "attempt": attempt, "delay_s": delay, "info": info})
+                # Removed per-step allure attachment to reduce overhead, kept in attempts_info for final report
                 time.sleep(delay)
             except Exception as e:
                 last_exc = e
                 attempts_info.append({"attempt": attempt, "error": str(e)})
-                _attach_to_allure("find_unexpected_error",
-                                  {"selector": str(selector), "attempt": attempt, "error": str(e)})
                 raise
 
+        # Attach detailed failure report only once at the end
         payload = {"selector": str(selector), "attempts": attempts_info, "retries": retries, "timeout_ms": timeout}
         _attach_to_allure("find_failed", payload)
         raise LocatorWaitTimeoutError(f"Waiting for selector timed out after {retries} attempts: {selector}",
@@ -595,12 +524,6 @@ class SelectorHelper:
     ) -> bool:
         """
         Check whether an element exists using Playwright's Locator APIs.
-
-        Behavior:
-        - Accepts Selector | str | Locator.
-        - If `timeout` is provided (>0), each attempt calls locator.wait_for(state="attached", timeout=timeout).
-        - Otherwise it performs a quick check using locator.count().
-        - Retries with exponential backoff are supported; DOM operations use Playwright's methods.
         """
         attempts: List[Dict[str, Any]] = []
 
@@ -608,17 +531,9 @@ class SelectorHelper:
             try:
                 loc, meta = SelectorHelper.resolve_with_meta(page, selector)
             except (SelectorResolutionError, FrameNotFoundError) as e:
-                # Non-transient: attach and return False
                 attempts.append({"attempt": attempt, "error": str(e)})
                 _attach_to_allure("exists_resolution_error", {"selector": str(selector), "attempts": attempts})
                 return False
-
-            # Attach resolve meta for observability
-            try:
-                _attach_to_allure("exists_resolve_meta",
-                                  {"strategy": meta.strategy, "ctx": meta.ctx, "attempts": meta.attempts})
-            except Exception:
-                pass
 
             try:
                 if timeout and timeout > 0:
@@ -626,16 +541,16 @@ class SelectorHelper:
                         loc.wait_for(state="attached", timeout=timeout)
                         count = loc.count()
                         ok = count > 0
-                        attempts.append({"attempt": attempt, "count": count, "ok": ok, "resolve_meta": meta.__dict__})
+                        attempts.append({"attempt": attempt, "count": count, "ok": ok, "resolve_meta": asdict(meta)})
                     except PlaywrightTimeoutError as e:
                         attempts.append({"attempt": attempt, "wait_for_timeout_ms": timeout, "error": str(e),
-                                         "resolve_meta": meta.__dict__})
+                                         "resolve_meta": asdict(meta)})
                         ok = False
                 else:
                     # quick non-blocking check (Playwright's count)
                     count = loc.count()
                     ok = count > 0
-                    attempts.append({"attempt": attempt, "count": count, "ok": ok, "resolve_meta": meta.__dict__})
+                    attempts.append({"attempt": attempt, "count": count, "ok": ok, "resolve_meta": asdict(meta)})
 
                 if ok:
                     _attach_to_allure("exists_result", {"selector": str(selector), "attempts": attempts})
@@ -648,7 +563,6 @@ class SelectorHelper:
             if attempt >= retries:
                 break
             delay = _calculate_backoff_delay(attempt, initial_delay, backoff_factor, max_delay)
-            _attach_to_allure("exists_backoff_step", {"selector": str(selector), "attempt": attempt, "delay_s": delay})
             time.sleep(delay)
 
         _attach_to_allure("exists_result", {"selector": str(selector), "attempts": attempts})
@@ -667,9 +581,6 @@ class SelectorHelper:
             backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
             max_delay: float = DEFAULT_MAX_DELAY
     ) -> None:
-        """
-        Resolve locator, wait for desired state, and click with retry/backoff.
-        """
         loc = SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,
             retries=retries, initial_delay=initial_delay,
@@ -690,9 +601,6 @@ class SelectorHelper:
             backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
             max_delay: float = DEFAULT_MAX_DELAY
     ) -> None:
-        """
-        Resolve locator, wait for desired state, and fill text with retry/backoff.
-        """
         loc = SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,
             retries=retries, initial_delay=initial_delay,
@@ -711,9 +619,10 @@ class SelectorHelper:
             initial_delay: float = DEFAULT_INITIAL_DELAY,
             backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
             max_delay: float = DEFAULT_MAX_DELAY
-    ) -> str:
+    ) -> Optional[str]:
         """
         Resolve locator, wait for desired state, and get text content with retry/backoff.
+        Returns Optional[str] as text_content() can be None.
         """
         loc = SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,
@@ -733,11 +642,8 @@ class SelectorHelper:
             backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
             max_delay: float = DEFAULT_MAX_DELAY
     ) -> bool:
-        """
-        Check whether an element is visible using Playwright's Locator APIs.
-        """
         try:
-            loc = SelectorHelper.find(
+            SelectorHelper.find(
                 page, selector, wait_for="visible", timeout=timeout or 1000,
                 retries=retries, initial_delay=initial_delay,
                 backoff_factor=backoff_factor, max_delay=max_delay
@@ -758,10 +664,6 @@ class SelectorHelper:
             backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
             max_delay: float = DEFAULT_MAX_DELAY
     ) -> Locator:
-        """
-        Resolve locator and wait for desired state with retry/backoff.
-        Returns the resolved locator.
-        """
         return SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,
             retries=retries, initial_delay=initial_delay,
