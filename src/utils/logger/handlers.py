@@ -11,12 +11,9 @@ import threading
 # 直接导入依赖模块
 from .config import LogConfig
 from .formatters import SecurityFormatter
-
-# 使用模块级别的变量来存储状态，这样即使模块被多次导入，这些变量也不会被重新初始化
 import os
 import tempfile
 
-# 使用环境变量来存储初始化状态，这样即使模块被多次导入，也不会重复初始化
 INITIALIZED_FLAG = "__logger_initialized__"
 
 # 初始化状态
@@ -96,15 +93,14 @@ class HandlerFactory:
                 delay=False
             )
             # 设置备份目录
-            if hasattr(handler, 'suffix'):
-                # 重写rotation_filename方法来指定备份目录
-                original_rotation_filename = handler.rotation_filename
-                def custom_rotation_filename(path):
-                    # 获取文件名
-                    fname = Path(path).name
-                    # 返回历史目录中的路径
-                    return str(history_dir / fname)
-                handler.rotation_filename = custom_rotation_filename
+            # 重写rotation_filename方法来指定备份目录
+            original_rotation_filename = handler.rotation_filename
+            def custom_rotation_filename(path):
+                # 获取文件名
+                fname = Path(path).name
+                # 返回历史目录中的路径
+                return str(history_dir / fname)
+            handler.rotation_filename = custom_rotation_filename
         elif handler_type == "rotating":
             from logging.handlers import RotatingFileHandler
             # 创建历史日志目录
@@ -119,15 +115,53 @@ class HandlerFactory:
                 delay=False
             )
             # 设置备份目录
-            if hasattr(handler, 'suffix'):
-                # 重写rotation_filename方法来指定备份目录
-                original_rotation_filename = handler.rotation_filename
-                def custom_rotation_filename(path):
-                    # 获取文件名
-                    fname = Path(path).name
-                    # 返回历史目录中的路径
-                    return str(history_dir / fname)
-                handler.rotation_filename = custom_rotation_filename
+            # 重写rotation_filename方法来指定备份目录
+            original_rotation_filename = handler.rotation_filename
+            def custom_rotation_filename(path):
+                # 获取文件名
+                fname = Path(path).name
+                # 为RotatingFileHandler添加日期信息
+                from datetime import datetime
+                date_str = datetime.now().strftime("%Y%m%d")
+                
+                # 提取基础文件名
+                if ".log." in fname:
+                    # 对于已有的数字后缀，提取基础文件名
+                    base_name = fname.split(".log.")[0] + ".log"
+                elif fname.endswith(".log"):
+                    # 对于基本文件名，直接使用
+                    base_name = fname
+                else:
+                    # 对于其他情况，直接使用
+                    base_name = fname
+                
+                # 确保base_name不包含日期信息
+                if "." + date_str in base_name:
+                    # 如果已经包含日期，直接使用
+                    base_history_name = base_name
+                else:
+                    # 添加日期信息
+                    base_history_name = f"{base_name}.{date_str}"
+                
+                # 检查历史目录中是否已存在该文件
+                history_file = history_dir / base_history_name
+                if not history_file.exists():
+                    # 如果不存在，使用基础名称
+                    final_name = base_history_name
+                else:
+                    # 如果存在，查找下一个可用的数字后缀
+                    counter = 1
+                    while True:
+                        candidate_name = f"{base_history_name}.{counter}"
+                        candidate_file = history_dir / candidate_name
+                        if not candidate_file.exists():
+                            final_name = candidate_name
+                            break
+                        counter += 1
+                
+                # 返回历史目录中的路径
+                return str(history_dir / final_name)
+            handler.rotation_filename = custom_rotation_filename
         elif handler_type == "console":
             import sys
             handler = logging.StreamHandler(sys.stdout)

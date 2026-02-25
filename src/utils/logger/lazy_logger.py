@@ -65,7 +65,7 @@ class LazyLogger:
                         # 错误日志（含堆栈）
                         logger.addHandler(HandlerFactory.create_handler(
                             "rotating",
-                            f"error_{datetime.now().strftime('%Y%m%d')}.log",
+                            "error.log",
                             logging.ERROR,
                             fmt="%(asctime)s %(levelname)-8s [%(filename)s:%(funcName)s:%(lineno)d] %(message)s\nEXCEPTION: %(exc_info)s",
                             maxBytes=LogConfig.MAX_BYTES

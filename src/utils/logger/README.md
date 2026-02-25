@@ -15,8 +15,15 @@
 - **API日志** (`api.log`)：API请求和响应日志
 - **性能日志** (`performance.log`)：性能指标和耗时记录
 - **安全日志** (`security.log`)：安全事件和审计日志
-- **错误日志** (`error_YYYYMMDD.log`)：错误和异常记录
+- **错误日志** (`error.log`)：错误和异常记录
 - **自定义日志**：支持创建自定义日志文件
+
+### 📁 历史日志管理
+- **历史目录** (`logs/history`)：存储所有类型的历史日志文件
+- **命名格式**：历史日志文件包含日期信息，如`error.log.20260220`
+- **自动轮转**：日志文件达到大小或时间限制时自动轮转
+- **无数字后缀**：历史日志文件名只包含日期，不包含数字后缀
+- **分类存储**：不同类型的历史日志文件在history目录中按日期分类存储
 
 ### ⚡ 高级功能
 - **延迟初始化**：日志实例按需创建，减少启动开销
@@ -147,6 +154,7 @@ log_security_event(
 | `api_logger` | API日志 | DEBUG | api.log |
 | `perf_logger` | 性能日志 | DEBUG | performance.log |
 | `security_logger` | 安全日志 | INFO | security.log |
+| `error` | 错误日志 | ERROR | error.log |
 
 ## 自定义日志器
 

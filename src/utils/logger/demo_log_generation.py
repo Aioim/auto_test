@@ -168,8 +168,8 @@ def generate_security_logs():
 
 # 生成错误日志
 def generate_error_logs():
-    """生成错误日志文件 (error_*.log)"""
-    print("\n5. Generating error logs (error_*.log):")
+    """生成错误日志文件 (error.log)"""
+    print("\n5. Generating error logs (error.log):")
     print("-" * 60)
     
     # 创建错误日志器（会自动使用错误日志文件）
@@ -253,7 +253,7 @@ def verify_log_files():
         "api.log",
         "performance.log",
         "security.log",
-        f"error_{today_date}.log",
+        "error.log",
         "custom_app.log"
     ]
     
