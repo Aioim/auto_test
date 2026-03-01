@@ -8,20 +8,20 @@ from __future__ import annotations
 
 import typing
 
-from utils.logger import logger
+from src.utils.logger import logger
 import time
 from typing import Optional, Union, List, Dict, Any, Callable, Tuple, Literal
 from contextlib import contextmanager
 from playwright.sync_api import Page, Locator, Response, TimeoutError as PlaywrightTimeoutError
-from utils.selector_helper import (
+from src.utils.common.selector_helper import (
     SelectorHelper,
     Selector,
     SelectorLike,
     ResolveInfo,
     FrameNotFoundError,
 )
-from utils.screenshot_helper import ScreenshotHelper
-from config import settings
+from src.utils.common.screenshot_helper import ScreenshotHelper
+from src.config import settings
 
 
 
@@ -1116,6 +1116,109 @@ class BasePage:
         timeout = timeout or self.DEFAULT_TIMEOUT
         with self.page.expect_popup(timeout=timeout) as popup_info:
             yield popup_info
+
+    # ==================== 弹窗处理 ====================
+
+    def accept_dialog(self, timeout: Optional[int] = None) -> None:
+        """
+        接受（确认）对话框
+
+        Args:
+            timeout: 超时时间（毫秒）
+
+        Raises:
+            PlaywrightTimeoutError: 对话框未出现
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        # 使用 expect_event 来等待对话框
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
+        logger.info(f"Accepting dialog with message: {dialog.message}")
+        dialog.accept()
+
+    def dismiss_dialog(self, timeout: Optional[int] = None) -> None:
+        """
+        取消（关闭）对话框
+
+        Args:
+            timeout: 超时时间（毫秒）
+
+        Raises:
+            PlaywrightTimeoutError: 对话框未出现
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        # 使用 expect_event 来等待对话框
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
+        logger.info(f"Dismissing dialog with message: {dialog.message}")
+        dialog.dismiss()
+
+    def get_dialog_message(self, timeout: Optional[int] = None) -> str:
+        """
+        获取对话框消息
+
+        Args:
+            timeout: 超时时间（毫秒）
+
+        Returns:
+            str: 对话框消息
+
+        Raises:
+            PlaywrightTimeoutError: 对话框未出现
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        # 使用 expect_event 来等待对话框
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
+        message = dialog.message
+        logger.info(f"Got dialog message: {message}")
+        return message
+
+    def handle_dialog(self, accept: bool = True, timeout: Optional[int] = None) -> str:
+        """
+        处理对话框并返回消息
+
+        Args:
+            accept: 是否接受对话框
+            timeout: 超时时间（毫秒）
+
+        Returns:
+            str: 对话框消息
+
+        Raises:
+            PlaywrightTimeoutError: 对话框未出现
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        # 使用 expect_event 来等待对话框
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
+        message = dialog.message
+        if accept:
+            logger.info(f"Accepting dialog with message: {message}")
+            dialog.accept()
+        else:
+            logger.info(f"Dismissing dialog with message: {message}")
+            dialog.dismiss()
+        return message
+
+    @contextmanager
+    def wait_for_dialog(self, timeout: Optional[int] = None):
+        """
+        等待对话框出现的上下文管理器
+
+        Args:
+            timeout: 超时时间（毫秒）
+
+        Yields:
+            EventContextManager: 对话框上下文
+
+        Usage:
+            with page.wait_for_dialog() as dialog_info:
+                page.click(trigger_dialog_button)
+            dialog = dialog_info.value
+            print(dialog.message)
+            dialog.accept()
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        # 使用 expect_event 来等待对话框
+        with self.page.expect_event("dialog", timeout=timeout) as dialog_info:
+            yield dialog_info
 
     # ==================== 调试辅助 ====================
 
