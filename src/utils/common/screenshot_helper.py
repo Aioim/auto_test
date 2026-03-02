@@ -28,6 +28,9 @@ from config import settings
 # 使用 LazyLogger 来获取日志实例，确保只初始化一次
 from utils.logger import logger
 
+# 导入 SelectorHelper 和 Selector 类型
+from src.utils.common.selector_helper import SelectorHelper, Selector, SelectorLike
+
 
 # ==================== 常量定义 ====================
 
@@ -274,7 +277,7 @@ class ScreenshotHelper:
     def _capture_screenshot_bytes(
             self,
             screenshot_type: ScreenshotType,
-            selector: Optional[Union[Locator, str, ElementHandle]] = None,
+            selector: Optional[Union[Locator, str, ElementHandle, Selector]] = None,
             format: ScreenshotFormat = DEFAULT_FORMAT,
             quality: Optional[int] = None,
             timeout: Optional[int] = None,
@@ -380,7 +383,7 @@ class ScreenshotHelper:
     def _capture_element_screenshot(
             self,
             screenshot_type: ScreenshotType,
-            selector: Optional[Union[Locator, str, ElementHandle]],
+            selector: Optional[Union[Locator, str, ElementHandle, Selector]],
             timeout: Optional[int],
             screenshot_options: Dict[str, Any]
     ) -> bytes:
@@ -641,7 +644,7 @@ class ScreenshotHelper:
             name: Optional[str] = None,
             screenshot_type: ScreenshotType = ScreenshotType.VIEWPORT,
             full_page: Optional[bool] = None,
-            selector: Optional[Union[Locator, str, ElementHandle]] = None,
+            selector: Optional[Union[Locator, str, ElementHandle, Selector]] = None,
             format: ScreenshotFormat = DEFAULT_FORMAT,
             quality: Optional[int] = None,
             timeout: Optional[int] = None,
@@ -802,7 +805,7 @@ class ScreenshotHelper:
 
     def take_element_screenshot(
             self,
-            selector: Union[Locator, str, ElementHandle],
+            selector: Union[Locator, str, ElementHandle, Selector],
             name: Optional[str] = None,
             highlight: bool = False,
             **kwargs
@@ -956,7 +959,7 @@ class ScreenshotHelper:
 
     def highlight_element(
             self,
-            selector: Union[Locator, str, ElementHandle],
+            selector: Union[Locator, str, ElementHandle, Selector],
             color: str = _HIGHLIGHT_BORDER_COLOR,
             thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
             style: str = _HIGHLIGHT_BORDER_STYLE,
@@ -985,7 +988,7 @@ class ScreenshotHelper:
 
     def highlight_elements(
             self,
-            selector: Union[Locator, str],
+            selector: Union[Locator, str, Selector],
             color: str = _HIGHLIGHT_BORDER_COLOR,
             thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
             style: str = _HIGHLIGHT_BORDER_STYLE,
@@ -1041,7 +1044,7 @@ class ScreenshotHelper:
     @contextmanager
     def highlighted_context(
             self,
-            selector: Union[Locator, str, ElementHandle],
+            selector: Union[Locator, str, ElementHandle, Selector],
             color: str = _HIGHLIGHT_BORDER_COLOR,
             thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
             style: str = _HIGHLIGHT_BORDER_STYLE,
@@ -1064,7 +1067,7 @@ class ScreenshotHelper:
 
     def highlight_and_capture(
             self,
-            selector: Union[Locator, str, ElementHandle],
+            selector: Union[Locator, str, ElementHandle, Selector],
             name: Optional[str] = None,
             color: str = _HIGHLIGHT_BORDER_COLOR,
             thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
@@ -1227,12 +1230,12 @@ class ScreenshotHelper:
 
     # ==================== 工具方法 ====================
 
-    def _resolve_locator(self, selector: Union[Locator, str]) -> Locator:
+    def _resolve_locator(self, selector: Union[Locator, str, Any]) -> Locator:
         """
         解析选择器为 Locator
 
         Args:
-            selector: Locator 对象或选择器字符串
+            selector: Locator 对象、选择器字符串或 Selector 对象
 
         Returns:
             Locator: 解析后的 Locator 对象
@@ -1250,6 +1253,15 @@ class ScreenshotHelper:
                 logger.debug(f"Cached new locator for selector: {selector}")
             # 从缓存返回 Locator
             return self._locator_cache[selector]
+        elif hasattr(selector, 'css') or hasattr(selector, 'xpath') or hasattr(selector, 'test_id') or hasattr(selector, 'role'):
+            # 检测是否为 Selector 对象（通过属性判断）
+            try:
+                # 动态导入 SelectorHelper 以避免循环导入问题
+                from src.utils.common.selector_helper import SelectorHelper
+                return SelectorHelper.resolve_locator(self.page, selector)
+            except Exception as e:
+                logger.error(f"Failed to resolve Selector object: {e}")
+                raise
         else:
             raise ValueError(f"Unsupported selector type: {type(selector)}")
 
@@ -1390,7 +1402,7 @@ class ScreenshotHelper:
     def get_screenshot_as_base64(
             self,
             screenshot_type: ScreenshotType = ScreenshotType.VIEWPORT,
-            selector: Optional[Union[Locator, str, ElementHandle]] = None,
+            selector: Optional[Union[Locator, str, ElementHandle, Selector]] = None,
             format: ScreenshotFormat = DEFAULT_FORMAT,
             quality: Optional[int] = None,
             timeout: Optional[int] = None,
