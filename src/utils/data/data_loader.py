@@ -51,9 +51,9 @@ def load_yaml_file( file_path: Path) -> Dict[str, List[Dict[str, Any]]]:
 
 
 if __name__=='__main__':
-    from config import settings
+    from config import PROJECT_ROOT
 
-    res=load_yaml_file(settings.project_root/'test_data/login_page.yaml')
+    res=load_yaml_file(PROJECT_ROOT/'test_data/login_page.yaml')
     print(res['login_page_case'])
     print(res['llm_model'])
     print(res['llm_model'])

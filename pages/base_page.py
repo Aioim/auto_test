@@ -8,20 +8,20 @@ from __future__ import annotations
 
 import typing
 
-from src.utils.logger import logger
+from utils.logger import logger
 import time
 from typing import Optional, Union, List, Dict, Any, Callable, Tuple, Literal
 from contextlib import contextmanager
 from playwright.sync_api import Page, Locator, Response, TimeoutError as PlaywrightTimeoutError
-from src.utils.common.selector_helper import (
+from utils.common.selector_helper import (
     SelectorHelper,
     Selector,
     SelectorLike,
     ResolveInfo,
     FrameNotFoundError,
 )
-from src.utils.common.screenshot_helper import ScreenshotHelper
-from src.config import settings
+from utils.common.screenshot_helper import ScreenshotHelper
+from config import settings
 
 
 

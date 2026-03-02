@@ -1,7 +1,8 @@
 import pytest
 import warnings
 import sys
-from src.utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
+from config import PROJECT_ROOT
+from utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
 from pathlib import Path
 from typing import List, Tuple, Any, Dict
 from functools import lru_cache
@@ -85,10 +86,10 @@ def pytest_generate_tests(metafunc):
         return
 
     # === 2. 构建完整文件路径 ===
-    from src.config import settings
+    from config import settings
     # date_str = marker.kwargs.get("date", str(date.today()))
     # base_dir = Path(marker.kwargs.get("base_dir", "test_data"))
-    abs_file_path = settings.project_root/ "test_data"/file_name
+    abs_file_path = settings.project_root/ "auto_ui_api/test_data"/file_name
     # abs_file_path = file_path.resolve()
     print('abs_file_path:',abs_file_path)
     # === 3. 文件存在性预检查 ===
@@ -256,11 +257,11 @@ def _parametrize_empty(metafunc) -> None:
     )
 
 if __name__=='__main__':
-    from src.config import settings
+
 
     # date_str = marker.kwargs.get("date", str(date.today()))
     # base_dir = Path(marker.kwargs.get("base_dir", "test_data"))
     file_name='login_cases.yaml'
-    abs_file_path = settings.project_root /'test_data'/ file_name
+    abs_file_path = PROJECT_ROOT /'test_data'/ file_name
     # abs_file_path = file_path.resolve()
     print('abs_file_path:', abs_file_path)

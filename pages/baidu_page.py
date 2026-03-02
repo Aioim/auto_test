@@ -132,7 +132,11 @@ if __name__=='__main__':
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
+        context = browser.new_context(
+        permissions=["geolocation", "notifications", "clipboard-read"],
+        geolocation={"latitude": 31.2304, "longitude": 121.4737}
+    )
+        page = context.new_page()
         baidu_page= BaiduPage(page)
         baidu_page.open()
         logger.info(baidu_page.debug_search_elements())

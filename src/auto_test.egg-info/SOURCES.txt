@@ -18,11 +18,6 @@ src/config_bak/locators_i18n.py
 src/config_bak/manager.py
 src/config_bak/yaml_loader.py
 src/utils/__init__.py
-src/utils/crypt.py
-src/utils/logger.py
-src/utils/screenshot_helper.py
-src/utils/screenshot_helper_copy.py
-src/utils/selector_helper.py
 src/utils/common/__init__.py
 src/utils/common/log_monitor.py
 src/utils/common/screenshot_helper.py
@@ -44,6 +39,12 @@ src/utils/logger/handlers.py
 src/utils/logger/lazy_logger.py
 src/utils/logger/metrics.py
 src/utils/logger/security.py
+src/utils/logger/test_date_suffix.py
+src/utils/logger/test_history_date.py
+src/utils/logger/test_log_rotation.py
+src/utils/logger/test_log_rotation_large.py
+src/utils/logger/test_remove_numbers.py
+src/utils/logger/test_rotation_filename.py
 src/utils/logger/utils.py
 src/utils/security/__init__.py
 src/utils/security/env_encrypt.py
@@ -51,5 +52,6 @@ src/utils/security/env_loader.py
 src/utils/security/key_rotation.py
 src/utils/security/secret_str.py
 src/utils/security/secrets_manager.py
+tests/test_dialog_handling.py
 tests/test_login.py
 tests/test_screenshot_helper.py
