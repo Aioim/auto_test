@@ -11,12 +11,6 @@ src/config/env_loader.py
 src/config/locators_i18n.py
 src/config/manager.py
 src/config/yaml_loader.py
-src/config_bak/__init__.py
-src/config_bak/_path.py
-src/config_bak/env_loader.py
-src/config_bak/locators_i18n.py
-src/config_bak/manager.py
-src/config_bak/yaml_loader.py
 src/utils/__init__.py
 src/utils/common/__init__.py
 src/utils/common/log_monitor.py
@@ -27,6 +21,7 @@ src/utils/common/visual_validator.py
 src/utils/data/__init__.py
 src/utils/data/data_faker.py
 src/utils/data/data_loader.py
+src/utils/data/db_helper.py
 src/utils/data/yaml_cases_loader.py
 src/utils/logger/__init__.py
 src/utils/logger/components.py

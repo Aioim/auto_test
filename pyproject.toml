@@ -14,9 +14,19 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    # 例如：
-    # "httpx",
-    # "pydantic>=2.0",
+    # 核心依赖
+    "playwright>=1.40.0",
+    "allure-python-commons>=2.13.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    
+    # 数据库相关依赖
+    "sqlalchemy>=2.0",
+    "pymysql",
+    "psycopg2-binary",
+    
+    # 可选依赖
+    "psutil>=5.9.0",  # 用于环境检测
 ]
 
 [project.optional-dependencies]
@@ -25,6 +35,7 @@ dev = [
     "black",
     "mypy",
     "ruff",
+    "allure-pytest>=2.13.0",  # 用于测试报告
 ]
 
 [tool.setuptools.packages.find]
