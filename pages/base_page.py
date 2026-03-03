@@ -48,6 +48,9 @@ class BasePage:
         # 页面元数据
         self._page_name = self.__class__.__name__
         self._load_time: Optional[float] = None
+        
+        # 控制台日志
+        self._console_logs: List[str] = []
 
     # ==================== 导航相关方法 ====================
 
@@ -79,10 +82,6 @@ class BasePage:
         self._load_time = time.time() - start_time
 
         logger.info(f"Page loaded in {self._load_time:.2f}s")
-
-        # 自动等待页面稳定
-        if wait_until == "networkidle":
-            self.page.wait_for_load_state("networkidle")
 
         return response
 
@@ -215,7 +214,7 @@ class BasePage:
     def wait_for(
         self,
         selector: SelectorLike,
-        state:typing.Optional[
+        state: Optional[
             Literal["attached", "detached", "hidden", "visible"]
         ] = None,
         timeout: Optional[int] = None
@@ -574,6 +573,7 @@ class BasePage:
         try:
             return locator.is_checked(timeout=timeout)
         except PlaywrightTimeoutError:
+            logger.debug(f"Timeout checking if element is checked: {selector}")
             return False
 
     def is_visible(
@@ -588,6 +588,7 @@ class BasePage:
         try:
             return locator.is_visible(timeout=timeout)
         except PlaywrightTimeoutError:
+            logger.debug(f"Timeout checking if element is visible: {selector}")
             return False
 
     def is_enabled(
@@ -602,6 +603,7 @@ class BasePage:
         try:
             return locator.is_enabled(timeout=timeout)
         except PlaywrightTimeoutError:
+            logger.debug(f"Timeout checking if element is enabled: {selector}")
             return False
 
     def is_disabled(
@@ -1011,21 +1013,34 @@ class BasePage:
         """
         return self._page_name
 
+    def start_console_listener(self) -> None:
+        """
+        开始监听控制台日志
+        
+        Usage:
+            page.start_console_listener()
+            # 执行操作
+            logs = page.console_logs()
+        """
+        def handle_console(msg):
+            self._console_logs.append(msg.text())
+        
+        self.page.on("console", handle_console)
+        logger.debug("Console listener started")
+
     def console_logs(self) -> List[str]:
         """
-        获取控制台日志（需要先监听 console 事件）
+        获取控制台日志（需要先调用 start_console_listener()）
 
         Returns:
             List[str]: 控制台日志列表
         """
-        # 需要在页面初始化时添加监听：
-        # page.on("console", lambda msg: self._console_logs.append(msg.text()))
-        return getattr(self, "_console_logs", [])
+        return self._console_logs
 
     # ==================== 实用工具 ====================
 
     @staticmethod
-    def format_selector( selector: Selector, **kwargs) -> Selector:
+    def format_selector(selector: Selector, **kwargs) -> Selector:
         """
         格式化 Selector（替换模板变量）
 
