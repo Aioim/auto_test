@@ -171,6 +171,8 @@ class AppConfig(_SettingsBase):
     enable_network_tracing: bool = True
     selector_strategy: str = "lenient"  # strict/lenient
     resource_cleanup_timeout: int = 5
+    login_url: str = ""
+
 
     # 截图输出路径
     SCREENSHOT_DIR: Path = PROJECT_ROOT / "output/screenshots"

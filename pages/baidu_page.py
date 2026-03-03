@@ -139,6 +139,7 @@ if __name__=='__main__':
         page = context.new_page()
         baidu_page= BaiduPage(page)
         baidu_page.open()
+        page.get_by_text(text="11",exact=True)
         logger.info(baidu_page.debug_search_elements())
         baidu_page.search('111111111')
 

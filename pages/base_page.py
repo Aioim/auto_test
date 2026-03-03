@@ -7,12 +7,11 @@ BasePage - Page Object Pattern 基类
 from __future__ import annotations
 
 import typing
-
-from utils.logger import logger
 import time
 from typing import Optional, Union, List, Dict, Any, Callable, Tuple, Literal
 from contextlib import contextmanager
 from playwright.sync_api import Page, Locator, Response, TimeoutError as PlaywrightTimeoutError
+from utils.logger import logger
 from utils.common.selector_helper import (
     SelectorHelper,
     Selector,
@@ -303,7 +302,7 @@ class BasePage:
         logger.debug(f"Clicking element: {selector}")
         locator.click(**click_options)
 
-    def db_click(
+    def double_click(
         self,
         selector: SelectorLike,
         wait_for: str = "visible",
@@ -566,8 +565,7 @@ class BasePage:
     def is_checked(
         self,
         selector: SelectorLike,
-        timeout: Optional[int] = None,
-        # **kwargs
+        timeout: Optional[int] = None
     ) -> bool:
         """检查复选框/单选框是否选中"""
         timeout = timeout or self.DEFAULT_TIMEOUT

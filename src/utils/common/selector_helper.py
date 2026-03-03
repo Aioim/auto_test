@@ -77,6 +77,9 @@ class Selector:
     description: Optional[str] = None
     deprecated: bool = False
 
+    # 精确匹配选项
+    exact: bool = False
+
     # iframe/frame support
     frame_name: Optional[str] = None
     frame_url_contains: Optional[str] = None
@@ -114,7 +117,8 @@ class Selector:
             raw_selector=fmt(self.raw_selector),
             frame_locator_css=fmt(self.frame_locator_css),
             pierce_selector=fmt(self.pierce_selector),
-            shadow_path=[fmt(p) for p in self.shadow_path if p] if self.shadow_path else None
+            shadow_path=[fmt(p) for p in self.shadow_path if p] if self.shadow_path else None,
+            exact=self.exact
         )
 
 
@@ -351,12 +355,15 @@ class SelectorHelper:
             def strategy():
                 if hasattr(ctx, "get_by_role"):
                     if selector.role_name:
-                        return ctx.get_by_role(selector.role, name=selector.role_name)
+                        return ctx.get_by_role(selector.role, name=selector.role_name, exact=selector.exact)
                     return ctx.get_by_role(selector.role)
                 escaped_role = _escape_css_value(selector.role)
                 sel = f"[role={escaped_role}]"
                 if selector.role_name:
-                    return ctx.locator(f"{sel} >> text={selector.role_name}")
+                    if selector.exact:
+                        return ctx.locator(f"{sel} >> text={selector.role_name}")
+                    else:
+                        return ctx.locator(f"{sel} >> text=*{selector.role_name}*")
                 return ctx.locator(sel)
             role_info = (selector.role, selector.role_name)
             attempts.append(("role", role_info))
@@ -413,8 +420,11 @@ class SelectorHelper:
         if selector.text:
             def strategy():
                 if hasattr(ctx, "get_by_text"):
-                    return ctx.get_by_text(selector.text)
-                return ctx.locator(f"text={selector.text}")
+                    return ctx.get_by_text(selector.text, exact=selector.exact)
+                if selector.exact:
+                    return ctx.locator(f"text={selector.text}")
+                else:
+                    return ctx.locator(f"text=*{selector.text}*")
             attempts.append(("text", selector.text))
             loc, success = _try_strategy(ctx, "text", strategy, attempts, selector.text)
             if success:
