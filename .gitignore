@@ -2,9 +2,10 @@
 *.pyc
 *__pycache__
 *.log
-.env*
+.env
 output/
 auto_test_egg-info/
 .trae*
 *_bak/
 logs/
+visual/
