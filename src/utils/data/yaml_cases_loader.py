@@ -148,7 +148,7 @@ def _raise_format_error(group_name: str, message: str, file_path: Path) -> None:
 
 
 if __name__ == '__main__':
-    from src.config import PROJECT_ROOT
+    from config import PROJECT_ROOT
 
     path = PROJECT_ROOT / 'test_data/login_page.yaml'
     print(load_yaml_file(path))

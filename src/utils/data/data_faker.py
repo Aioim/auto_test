@@ -13,8 +13,8 @@ from tqdm import tqdm as sync_tqdm
 from tqdm.asyncio import tqdm as async_tqdm
 from faker import Faker
 
-from src.config import settings
-from src.utils.logger import logger
+from config import settings
+from utils.logger import logger
 
 
 # ==================== 生成策略协议 ====================

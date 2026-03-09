@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict, List
 import yaml
-from src.utils.logger import logger
+from utils.logger import logger
 
 
 
