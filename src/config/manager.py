@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, Field
-from config.env_loader import EnvLoader
-from config.yaml_loader import YamlLoader
-from config._path import PROJECT_ROOT
+from .env_loader import EnvLoader
+from .yaml_loader import YamlLoader
+from ._path import PROJECT_ROOT
 
 
 class _SettingsBase(BaseModel):
@@ -86,7 +86,7 @@ class BrowserConfig(BaseModel):
     headless: bool = True
     type: str = "chromium"  # chromium/firefox/webkit
     enable_js: bool = True
-    viewport: Dict[str, int] = {"width": 1280, "height": 720}
+    viewport: Dict[str, int] = {"width": 1920, "height": 1080}
 
     @field_validator("type")
     @classmethod
@@ -149,9 +149,9 @@ class AppConfig(_SettingsBase):
     """应用级配置模型"""
 
     # 核心配置
-    env: str = "dev"
-    frontend_version: str = "v2024.01"
-    base_url: str = "https://example.com"
+    env: str = "beta"
+    frontend_version: str = "v2026.01"
+    base_url: str = None
     api_base_url: Optional[str] = None
 
     # 敏感凭证 (通过.env加载)
@@ -182,7 +182,7 @@ class AppConfig(_SettingsBase):
     @field_validator("env")
     @classmethod
     def validate_env(cls, v):
-        valid_envs = ["dev", "staging", "prod"]
+        valid_envs = ["alpha", "beta", "prod"]
         if v not in valid_envs:
             raise ValueError(f"无效环境: {v}, 必须是 {valid_envs}")
         return v

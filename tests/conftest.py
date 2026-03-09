@@ -1,18 +1,119 @@
 import pytest
 import warnings
 import sys
-from config import PROJECT_ROOT
-from utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
 from pathlib import Path
 from typing import List, Tuple, Any, Dict
 from functools import lru_cache
 import re
 
+from src.config import PROJECT_ROOT, settings
+from src.utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
+from playwright.sync_api import sync_playwright
+from src.utils.api_client import APIClient
+
+# 尝试导入 DatabaseHelper，如果缺少依赖则跳过
+try:
+    from src.utils.data.db_helper import DatabaseHelper
+except ImportError:
+    DatabaseHelper = None
+
+
+@pytest.fixture(scope="session")
+def playwright():
+    """
+    提供 Playwright 实例
+    作用域：session，整个测试会话只创建一次
+    """
+    with sync_playwright() as p:
+        yield p
+
+
+@pytest.fixture(scope="session")
+def browser(playwright):
+    """
+    启动浏览器实例
+    作用域：session，整个测试会话只启动一次浏览器
+    使用配置文件中指定的浏览器类型
+    """
+    browser = getattr(playwright, settings.BROWSER).launch(headless=settings.HEADLESS)
+    yield browser
+    browser.close()
+
+
+@pytest.fixture(scope="function")
+def context(browser):
+    """
+    创建浏览器上下文
+    作用域：function，每个测试函数创建一个新的上下文
+    设置视口大小为 1920x1080
+    """
+    context = browser.new_context(viewport={"width": 1920, "height": 1080})
+    yield context
+    context.close()
+
+
+@pytest.fixture(scope="function")
+def page(context):
+    """
+    创建新的页面实例
+    作用域：function，每个测试函数创建一个新的页面
+    设置默认超时时间为配置文件中指定的值
+    """
+    page = context.new_page()
+    page.set_default_timeout(settings.TIMEOUT)
+    yield page
+
+
+@pytest.fixture(scope="function")
+def api_client():
+    """
+    创建 API 客户端实例
+    作用域：function，每个测试函数创建一个新的客户端
+    """
+    client = APIClient(base_url=settings.API_BASE_URL)
+    yield client
+    client.close()
+
+
+@pytest.fixture(scope="function")
+def db():
+    """
+    创建数据库 helper 实例
+    作用域：function，每个测试函数创建一个新的数据库连接
+    """
+    if DatabaseHelper is None:
+        pytest.skip("缺少 pymysql 依赖，跳过数据库测试")
+    db_helper = DatabaseHelper(settings.DB_HOST, settings.DB_PORT, settings.DB_NAME, settings.DB_USER, settings.DB_PASSWORD)
+    yield db_helper
+    db_helper.close()
+
+
+@pytest.fixture(scope="function")
+def auth_token(api_client):
+    """
+    获取认证 token
+    作用域：function，每个测试函数获取一个新的 token
+    使用配置文件中的默认用户信息登录
+    """
+    resp = api_client.post("/auth/login", json={"username": settings.DEFAULT_USER["username"], "password": settings.DEFAULT_USER["password"]})
+    return resp.json().get("access_token")
+
 
 # ==================== 安全的YAML加载（带缓存） ====================
 @lru_cache(maxsize=128)
 def _cached_load_yaml(file_path_str: str) -> Dict[str, List[Dict[str, Any]]]:
-    """带缓存的YAML加载（基于绝对路径）"""
+    """
+    带缓存的YAML加载（基于绝对路径）
+    
+    Args:
+        file_path_str: YAML文件的绝对路径
+        
+    Returns:
+        加载的YAML数据
+        
+    Raises:
+        FileNotFoundError: 如果文件不存在
+    """
     file_path = Path(file_path_str)
     if not file_path.exists():
         raise FileNotFoundError(f"YAML文件不存在: {file_path}")
@@ -27,6 +128,13 @@ def _extract_yaml_param_names(metafunc, first_case: Dict[str, Any]) -> List[str]
       - 不支持字段名映射（避免复杂性）
       - 测试函数参数名必须与YAML字段名完全一致
       - 自动过滤pytest内置fixture（通过字段存在性判断）
+      
+    Args:
+        metafunc: pytest的metafunc对象
+        first_case: 第一个测试用例的数据
+        
+    Returns:
+        提取的参数名列表
     """
     yaml_fields = set(first_case.keys()) if first_case else set()
     param_names = [p for p in metafunc.fixturenames if p in yaml_fields]
@@ -86,18 +194,15 @@ def pytest_generate_tests(metafunc):
         return
 
     # === 2. 构建完整文件路径 ===
-    from config import settings
-    # date_str = marker.kwargs.get("date", str(date.today()))
-    # base_dir = Path(marker.kwargs.get("base_dir", "test_data"))
-    abs_file_path = settings.project_root/ "auto_ui_api/test_data"/file_name
-    # abs_file_path = file_path.resolve()
-    print('abs_file_path:',abs_file_path)
+    # 修复文件路径构建
+    abs_file_path = PROJECT_ROOT / "test_data" / file_name
+    print('abs_file_path:', abs_file_path)
+    
     # === 3. 文件存在性预检查 ===
     if not abs_file_path.exists():
         _warn_and_skip(
             metafunc,
             f"YAML数据文件不存在，跳过测试: {abs_file_path}\n"
-            # f"  请检查目录结构: {base_dir}/daily/{date_str}/{file_name}"
         )
         _parametrize_empty(metafunc)
         return
@@ -122,7 +227,6 @@ def pytest_generate_tests(metafunc):
         _warn_and_skip(
             metafunc,
             f"YAML中不存在用例组 '{group_name}'，跳过测试。\n"
-            # f"  文件: {file_name} (日期: {date_str})\n"
             f"  可用组: {available if available else '[空]'}"
         )
         _parametrize_empty(metafunc)
@@ -203,7 +307,13 @@ def pytest_generate_tests(metafunc):
 
 # ==================== 安全的辅助函数 ====================
 def _raise_usage_error(metafunc, message: str) -> None:
-    """在收集阶段抛出使用错误"""
+    """
+    在收集阶段抛出使用错误
+    
+    Args:
+        metafunc: pytest的metafunc对象
+        message: 错误消息
+    """
     raise pytest.UsageError(
         f"[YAML数据错误] in {metafunc.definition.nodeid}\n{message}"
     )
@@ -216,6 +326,10 @@ def _warn_and_skip(metafunc, message: str) -> None:
     注意：在收集阶段不能使用 pytest.skip()，只能：
       1. 通过 warnings.warn() 发出警告（pytest会捕获到警告摘要）
       2. 同时打印到stderr确保可见性
+    
+    Args:
+        metafunc: pytest的metafunc对象
+        message: 警告消息
     """
     full_message = f"[YAML数据] in {metafunc.definition.nodeid}\n{message}"
 
@@ -231,6 +345,9 @@ def _parametrize_empty(metafunc) -> None:
     参数化空列表触发pytest自动跳过
 
     关键修复：确保参数名是有效的Python标识符
+    
+    Args:
+        metafunc: pytest的metafunc对象
     """
     # 优先从测试函数参数中选择一个安全的参数名
     safe_params = [
@@ -256,12 +373,9 @@ def _parametrize_empty(metafunc) -> None:
         scope="function"
     )
 
+
 if __name__=='__main__':
-
-
-    # date_str = marker.kwargs.get("date", str(date.today()))
-    # base_dir = Path(marker.kwargs.get("base_dir", "test_data"))
+    # 测试文件路径构建
     file_name='login_cases.yaml'
     abs_file_path = PROJECT_ROOT /'test_data'/ file_name
-    # abs_file_path = file_path.resolve()
     print('abs_file_path:', abs_file_path)

@@ -3,7 +3,11 @@ API 测试客户端
 """
 import requests
 from loguru import logger
-import allure
+# 尝试导入 allure，如果缺少依赖则跳过
+try:
+    import allure
+except ImportError:
+    allure = None
 from typing import Optional, Dict, Any, List, Union
 from jsonschema import validate, ValidationError
 import time
@@ -31,7 +35,6 @@ class APIClient:
         on_backoff=lambda details: logger.warning(f"请求失败，{details['wait']:.1f}秒后重试 ({details['tries']}/3)"),
         on_giveup=lambda details: logger.error(f"请求最终失败，已尝试 {details['tries']} 次")
     )
-    @allure.step("API 请求: {method} {endpoint}")
     def request(
         self,
         method: str,
@@ -45,6 +48,28 @@ class APIClient:
         **kwargs
     ) -> requests.Response:
         """发送 HTTP 请求"""
+        # 使用 allure 步骤（如果 allure 可用）
+        if allure:
+            @allure.step(f"API 请求: {method} {endpoint}")
+            def wrapped():
+                return self._request_impl(method, endpoint, headers, params, json_data, data, files, timeout, **kwargs)
+            return wrapped()
+        else:
+            return self._request_impl(method, endpoint, headers, params, json_data, data, files, timeout, **kwargs)
+    
+    def _request_impl(
+        self,
+        method: str,
+        endpoint: str,
+        headers: Dict = None,
+        params: Dict = None,
+        json_data: Dict = None,
+        data: Any = None,
+        files: Dict = None,
+        timeout: int = 30,
+        **kwargs
+    ) -> requests.Response:
+        """请求实现"""
         url = f"{self.base_url}{endpoint}"
         
         # 过滤敏感信息
@@ -77,34 +102,36 @@ class APIClient:
             safe_response = self._filter_sensitive_info(response.text[:500])
             logger.debug(f"Response body: {safe_response}")
             
-            # Allure 附加请求信息
-            allure.attach(
-                f"{method} {url}\nParams: {safe_params}\nHeaders: {headers or {}}",
-                name="Request",
-                attachment_type=allure.attachment_type.TEXT
-            )
-            allure.attach(
-                safe_response,
-                name="Response",
-                attachment_type=allure.attachment_type.TEXT
-            )
-            allure.attach(
-                f"Response time: {response_time:.2f}s",
-                name="Performance",
-                attachment_type=allure.attachment_type.TEXT
-            )
+            # Allure 附加请求信息（如果 allure 可用）
+            if allure:
+                allure.attach(
+                    f"{method} {url}\nParams: {safe_params}\nHeaders: {headers or {}}",
+                    name="Request",
+                    attachment_type=allure.attachment_type.TEXT
+                )
+                allure.attach(
+                    safe_response,
+                    name="Response",
+                    attachment_type=allure.attachment_type.TEXT
+                )
+                allure.attach(
+                    f"Response time: {response_time:.2f}s",
+                    name="Performance",
+                    attachment_type=allure.attachment_type.TEXT
+                )
             
             return response
             
         except RequestException as e:
             response_time = time.time() - start_time
             logger.error(f"Request failed: {e} (耗时: {response_time:.2f}s)")
-            # Allure 附加错误信息
-            allure.attach(
-                f"Request failed: {e}",
-                name="Error",
-                attachment_type=allure.attachment_type.TEXT
-            )
+            # Allure 附加错误信息（如果 allure 可用）
+            if allure:
+                allure.attach(
+                    f"Request failed: {e}",
+                    name="Error",
+                    attachment_type=allure.attachment_type.TEXT
+                )
             raise
     
     def get(self, endpoint: str, **kwargs) -> requests.Response:
@@ -122,66 +149,128 @@ class APIClient:
     def delete(self, endpoint: str, **kwargs) -> requests.Response:
         return self.request("DELETE", endpoint, **kwargs)
     
-    @allure.step("验证响应状态码")
     def assert_status(self, response: requests.Response, expected: Union[int, List[int]]):
         """断言状态码"""
-        if isinstance(expected, list):
-            assert response.status_code in expected, \
-                f"Expected status in {expected}, got {response.status_code}"
+        # 使用 allure 步骤（如果 allure 可用）
+        if allure:
+            @allure.step("验证响应状态码")
+            def wrapped():
+                if isinstance(expected, list):
+                    assert response.status_code in expected, \
+                        f"Expected status in {expected}, got {response.status_code}"
+                else:
+                    assert response.status_code == expected, \
+                        f"Expected status {expected}, got {response.status_code}"
+                return self
+            return wrapped()
         else:
-            assert response.status_code == expected, \
-                f"Expected status {expected}, got {response.status_code}"
-        return self
+            if isinstance(expected, list):
+                assert response.status_code in expected, \
+                    f"Expected status in {expected}, got {response.status_code}"
+            else:
+                assert response.status_code == expected, \
+                    f"Expected status {expected}, got {response.status_code}"
+            return self
     
-    @allure.step("验证响应 JSON Schema")
     def assert_schema(self, response: requests.Response, schema: Dict):
         """断言 JSON Schema"""
-        try:
-            validate(instance=response.json(), schema=schema)
-            logger.info("Schema validation passed")
-        except ValidationError as e:
-            logger.error(f"Schema validation failed: {e.message}")
-            allure.attach(
-                f"Schema validation failed: {e.message}",
-                name="Schema Error",
-                attachment_type=allure.attachment_type.TEXT
-            )
-            raise
-        return self
+        # 使用 allure 步骤（如果 allure 可用）
+        if allure:
+            @allure.step("验证响应 JSON Schema")
+            def wrapped():
+                try:
+                    validate(instance=response.json(), schema=schema)
+                    logger.info("Schema validation passed")
+                except ValidationError as e:
+                    logger.error(f"Schema validation failed: {e.message}")
+                    allure.attach(
+                        f"Schema validation failed: {e.message}",
+                        name="Schema Error",
+                        attachment_type=allure.attachment_type.TEXT
+                    )
+                    raise
+                return self
+            return wrapped()
+        else:
+            try:
+                validate(instance=response.json(), schema=schema)
+                logger.info("Schema validation passed")
+            except ValidationError as e:
+                logger.error(f"Schema validation failed: {e.message}")
+                raise
+            return self
     
-    @allure.step("验证响应字段")
     def assert_field(self, response: requests.Response, field: str, expected: Any):
         """断言响应字段值"""
-        data = response.json()
-        actual = self._get_nested_field(data, field)
-        assert actual == expected, f"Field {field}: expected {expected}, got {actual}"
-        return self
+        # 使用 allure 步骤（如果 allure 可用）
+        if allure:
+            @allure.step("验证响应字段")
+            def wrapped():
+                data = response.json()
+                actual = self._get_nested_field(data, field)
+                assert actual == expected, f"Field {field}: expected {expected}, got {actual}"
+                return self
+            return wrapped()
+        else:
+            data = response.json()
+            actual = self._get_nested_field(data, field)
+            assert actual == expected, f"Field {field}: expected {expected}, got {actual}"
+            return self
     
-    @allure.step("验证响应字段存在")
     def assert_field_exists(self, response: requests.Response, field: str):
         """断言响应字段存在"""
-        data = response.json()
-        actual = self._get_nested_field(data, field)
-        assert actual is not None, f"Field {field} not found in response"
-        return self
+        # 使用 allure 步骤（如果 allure 可用）
+        if allure:
+            @allure.step("验证响应字段存在")
+            def wrapped():
+                data = response.json()
+                actual = self._get_nested_field(data, field)
+                assert actual is not None, f"Field {field} not found in response"
+                return self
+            return wrapped()
+        else:
+            data = response.json()
+            actual = self._get_nested_field(data, field)
+            assert actual is not None, f"Field {field} not found in response"
+            return self
     
-    @allure.step("验证响应字段包含")
     def assert_field_contains(self, response: requests.Response, field: str, expected: Any):
         """断言响应字段包含指定值"""
-        data = response.json()
-        actual = self._get_nested_field(data, field)
-        assert expected in str(actual), f"Field {field} does not contain {expected}"
-        return self
+        # 使用 allure 步骤（如果 allure 可用）
+        if allure:
+            @allure.step("验证响应字段包含")
+            def wrapped():
+                data = response.json()
+                actual = self._get_nested_field(data, field)
+                assert expected in str(actual), f"Field {field} does not contain {expected}"
+                return self
+            return wrapped()
+        else:
+            data = response.json()
+            actual = self._get_nested_field(data, field)
+            assert expected in str(actual), f"Field {field} does not contain {expected}"
+            return self
     
-    @allure.step("验证响应时间")
     def assert_response_time(self, response: requests.Response, max_time: float):
         """断言响应时间"""
-        # 假设响应对象有 elapsed 属性
-        response_time = response.elapsed.total_seconds()
-        assert response_time <= max_time, \
-            f"Response time {response_time:.2f}s exceeds maximum {max_time}s"
-        logger.info(f"Response time {response_time:.2f}s within limit {max_time}s")
-        return self
+        # 使用 allure 步骤（如果 allure 可用）
+        if allure:
+            @allure.step("验证响应时间")
+            def wrapped():
+                # 假设响应对象有 elapsed 属性
+                response_time = response.elapsed.total_seconds()
+                assert response_time <= max_time, \
+                    f"Response time {response_time:.2f}s exceeds maximum {max_time}s"
+                logger.info(f"Response time {response_time:.2f}s within limit {max_time}s")
+                return self
+            return wrapped()
+        else:
+            # 假设响应对象有 elapsed 属性
+            response_time = response.elapsed.total_seconds()
+            assert response_time <= max_time, \
+                f"Response time {response_time:.2f}s exceeds maximum {max_time}s"
+            logger.info(f"Response time {response_time:.2f}s within limit {max_time}s")
+            return self
     
     def set_auth_token(self, token: str):
         """设置认证 Token"""

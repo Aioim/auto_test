@@ -5,7 +5,7 @@
 import os
 from typing import Any, Dict
 from dotenv import load_dotenv
-from config._path import PROJECT_ROOT
+from ._path import PROJECT_ROOT
 
 
 class EnvLoader:

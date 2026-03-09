@@ -15,6 +15,7 @@
 """
 import argparse
 import sys
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -73,6 +74,46 @@ def decrypt_value(encrypted_str: str) -> str:
     decrypted_bytes = sm._fernet.decrypt(encrypted_bytes)
     return decrypted_bytes.decode('utf-8')
 
+def decrypt_env_key(env_var: str) -> str:
+    """
+    解密 .env 文件中的加密字段
+
+    Args:
+        env_var: 环境变量名（例如：DB_PASSWORD）
+
+    Returns:
+        str: 解密后的明文值
+
+    Raises:
+        ValueError: 如果环境变量不存在或格式无效
+        RuntimeError: 如果解密失败
+
+    Example:
+        #>>> decrypt_env_key("DB_PASSWORD")
+        'mysecretpassword'
+    """
+    from dotenv import load_dotenv
+    
+    # 加载 .env 文件
+    load_dotenv()
+    
+    # 获取环境变量值
+    encrypted_value = os.getenv(env_var)
+    if encrypted_value is None:
+        raise ValueError(f"Environment variable '{env_var}' not found")
+    
+    # 检查是否为空值
+    if not encrypted_value.strip():
+        raise ValueError(f"Environment variable '{env_var}' is empty")
+    
+    try:
+        # 解密值
+        return decrypt_value(encrypted_value)
+    except ValueError as e:
+        # 重新抛出带有更详细信息的异常
+        raise ValueError(f"Failed to decrypt '{env_var}': {str(e)}")
+    except Exception as e:
+        raise RuntimeError(f"Error decrypting '{env_var}': {str(e)}")
 
 def encrypt_env_file(input_path: str, output_path: Optional[str] = None):
     """

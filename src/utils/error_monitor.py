@@ -8,11 +8,9 @@ from typing import Optional, List, Callable, Dict, Any
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 from pathlib import Path
 import time
-import logging
 import traceback
-
-# 配置日志
-logger = logging.getLogger(__name__)
+import logging
+from src.utils.logger import logger
 
 
 class ErrorMonitor:
@@ -22,11 +20,13 @@ class ErrorMonitor:
         self, 
         page: Page,
         screenshot_on_error: bool = True,
-        screenshot_dir: str = "./screenshots",
+        screenshot_dir: str = "errors",
         func_name: str = "unknown",
         # 添加新的配置选项
         max_errors: int = 100,  # 最大错误数量，防止内存溢出
-        ignore_errors: Optional[List[str]] = None  # 忽略的错误模式
+        ignore_errors: Optional[List[str]] = None,  # 忽略的错误模式
+        interactive_mode: bool = False,  # 交互模式，出现错误时等待用户确认
+        auto_continue_after_screenshot: bool = False  # 自动继续模式，截图后自动继续执行
     ):
         self.page = page
         self.dialogs: List[Dict[str, str]] = []
@@ -36,6 +36,8 @@ class ErrorMonitor:
         # 新增配置
         self.max_errors = max_errors
         self.ignore_errors = ignore_errors or []
+        self.interactive_mode = interactive_mode
+        self.auto_continue_after_screenshot = auto_continue_after_screenshot
         
         # 截图配置
         self.screenshot_on_error = screenshot_on_error
@@ -65,7 +67,7 @@ class ErrorMonitor:
         try:
             # 使用绝对路径，提高跨平台兼容性
             path = Path(self.screenshot_dir).resolve()
-            path.mkdir(exist_ok=True)
+            path.mkdir(parents=True, exist_ok=True)
             
             # 改进文件名格式，包含更多信息
             timestamp = int(time.time() * 1000)
@@ -247,12 +249,7 @@ class ErrorMonitor:
             page_errors
         ])
         
-        if has_any_error and not self.screenshot_taken:
-            logger.warning("检测到错误但未截图，尝试补截...")
-            screenshot_file = self._take_screenshot(suffix="FINAL")
-            if not screenshot_file:
-                logger.error("补截截图失败")
-        
+        # 先创建结果对象
         result = {
             "dialogs": self.dialogs,
             "console_errors": self.console_errors,
@@ -261,6 +258,19 @@ class ErrorMonitor:
             "screenshot": self.screenshot_filename,
             "has_error": has_any_error
         }
+        
+        if has_any_error and not self.screenshot_taken:
+            logger.warning("检测到错误但未截图，尝试补截...")
+            screenshot_file = self._take_screenshot(suffix="FINAL")
+            if not screenshot_file:
+                logger.error("补截截图失败")
+            else:
+                # 更新截图文件名
+                result["screenshot"] = self.screenshot_filename
+                # 自动继续模式：截图完成后记录并继续执行
+                if self.auto_continue_after_screenshot:
+                    error_summary = self.format_error_message(result)
+                    logger.warning(f"📸 截图完成，自动继续执行 - 错误摘要：{error_summary}")
         
         logger.debug(f"错误检查结果：has_error={result['has_error']}, screenshot={result['screenshot']}")
         return result
@@ -283,9 +293,10 @@ def monitor_errors(
     error_selectors: Optional[List[str]] = None,
     raise_on_error: bool = True,
     screenshot_on_error: bool = True,
-    screenshot_dir: str = "./screenshots",
+    screenshot_dir: str = "errors",
     selector_timeout: int = 500,
-    log_level: int = logging.DEBUG
+    interactive_mode: bool = False,
+    auto_continue_after_screenshot: bool = False
 ):
     """
     错误监控装饰器工厂
@@ -297,13 +308,13 @@ def monitor_errors(
         screenshot_on_error: 检测到错误时是否截图
         screenshot_dir: 截图保存目录
         selector_timeout: 检查元素可见性的超时时间（毫秒）
-        log_level: 日志级别
+        interactive_mode: 交互模式，出现错误时等待用户确认
+        auto_continue_after_screenshot: 自动继续模式，截图后自动继续执行
     
     Returns:
         装饰器函数
     """
     # 设置日志级别
-    logger.setLevel(log_level)
     
     def decorator(func: Callable):
         @wraps(func)
@@ -314,7 +325,9 @@ def monitor_errors(
                 page=page,
                 screenshot_on_error=screenshot_on_error,
                 screenshot_dir=screenshot_dir,
-                func_name=func.__name__
+                func_name=func.__name__,
+                interactive_mode=interactive_mode,
+                auto_continue_after_screenshot=auto_continue_after_screenshot
             )
             errors: Dict[str, Any] = {}
             
@@ -350,7 +363,7 @@ def monitor_errors(
                     try:
                         # 使用绝对路径，提高跨平台兼容性
                         path = Path(screenshot_dir).resolve()
-                        path.mkdir(exist_ok=True)
+                        path.mkdir(parents=True, exist_ok=True)
                         filename = f"{func.__name__}_EXCEPTION_{int(time.time() * 1000)}.png"
                         screenshot_path = path / filename
                         
@@ -411,8 +424,7 @@ def test_alert_screenshot(page: Page, screenshot_dir: str = "./test_screenshots"
         page=page,
         screenshot_on_error=True,
         screenshot_dir=screenshot_dir,
-        raise_on_error=False,
-        log_level=logging.DEBUG
+        raise_on_error=False
     )
     def trigger_alert():
         page.goto("data:text/html,<h1>测试页面</h1>")
@@ -431,16 +443,11 @@ def test_alert_screenshot(page: Page, screenshot_dir: str = "./test_screenshots"
 # ============================================================================
 
 if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
     print("✅ ErrorMonitor 模块加载成功")
     print("📌 使用方法：@monitor_errors(page=your_page_object)")
     print("📌 弹窗截图功能：在 dialog.accept() 之前执行截图")
     print("📌 调试模式：设置 log_level=logging.DEBUG 查看详细日志")
+    print("📌 自动继续模式：设置 auto_continue_after_screenshot=True 截图后自动继续执行")
     print("\n=== 使用示例 ===")
     print("""
 # 基本使用示例
@@ -459,7 +466,7 @@ with sync_playwright() as p:
         log_level=logging.INFO
     )
     def test_login():
-        """测试登录功能"""
+        #测试登录功能
         page.goto("https://example.com/login")
         page.fill("#username", "testuser")
         page.fill("#password", "password")
@@ -492,7 +499,7 @@ with sync_playwright() as p:
         log_level=logging.DEBUG
     )
     def test_checkout():
-        """测试 checkout 流程"""
+        #测试 checkout 流程
         page.goto("https://example.com/checkout")
         # 填写表单
         page.fill("#name", "Test User")
@@ -518,6 +525,38 @@ with sync_playwright() as p:
     page = browser.new_page()
     test_alert_screenshot(page, screenshot_dir="./test-screenshots")
     browser.close()
+
+# 自动继续模式示例
+from playwright.sync_api import sync_playwright
+from src.utils.error_monitor import monitor_errors
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=False)
+    page = browser.new_page()
+    
+    @monitor_errors(
+        page=page,
+        screenshot_on_error=True,
+        screenshot_dir="./screenshots",
+        raise_on_error=False,
+        auto_continue_after_screenshot=True  # 启用自动继续模式
+    )
+    def test_auto_continue():
+        #测试自动继续模式
+        page.goto("data:text/html,<h1>测试页面</h1>")
+        # 触发一个弹窗
+        page.evaluate("alert('测试弹窗，将自动截图并继续执行')")
+        # 触发控制台错误
+        page.evaluate("console.error('测试控制台错误')")
+        # 继续执行后续操作
+        print("继续执行后续测试步骤...")
+        page.evaluate("console.log('测试继续执行')")
+    
+    try:
+        test_auto_continue()
+        print("✅ 测试执行完成")
+    finally:
+        browser.close()
 """)
     
     # 运行测试（需要传入 page 对象）

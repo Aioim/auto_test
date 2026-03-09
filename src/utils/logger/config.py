@@ -5,14 +5,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict, Any, Set
 import threading
-
-# 获取项目根目录
-try:
-    # 尝试从 src 目录开始的路径
-    PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.resolve()
-except Exception:
-    # 回退到当前文件所在目录
-    PROJECT_ROOT = Path(__file__).parent.resolve()
+from src.config import PROJECT_ROOT
 
 class ConfigLoader:
     """配置加载器"""
@@ -42,23 +35,11 @@ class ConfigLoader:
         }
         
         try:
-            # 尝试从 src.config 加载
-            try:
-                from src.config import settings
-                config['log_dir'] = getattr(settings.log, 'log_dir', config['log_dir'])
-                config['log_level'] = getattr(settings.log, 'log_level', config['log_level'])
-                config['log_file'] = getattr(settings.log, 'log_file', config['log_file'])
-                config['env'] = getattr(settings, 'env', config['env'])
-            except ImportError:
-                # 尝试从 config 加载（兼容旧版）
-                try:
-                    from src.config import settings
-                    config['log_dir'] = getattr(settings.log, 'log_dir', config['log_dir'])
-                    config['log_level'] = getattr(settings.log, 'log_level', config['log_level'])
-                    config['log_file'] = getattr(settings.log, 'log_file', config['log_file'])
-                    config['env'] = getattr(settings, 'env', config['env'])
-                except ImportError:
-                    pass
+            from src.config import settings
+            config['log_dir'] = getattr(settings.log, 'log_dir', config['log_dir'])
+            config['log_level'] = getattr(settings.log, 'log_level', config['log_level'])
+            config['log_file'] = getattr(settings.log, 'log_file', config['log_file'])
+            config['env'] = getattr(settings, 'env', config['env'])
         except (ImportError, AttributeError) as e:
             # 静默失败，使用默认配置
             pass
