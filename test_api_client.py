@@ -3,7 +3,7 @@
 """
 
 import logging
-from src.utils.api_client import APIClient
+from utils.api_client import APIClient
 
 # 配置日志
 logging.basicConfig(

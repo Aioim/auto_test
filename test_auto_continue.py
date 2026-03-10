@@ -3,7 +3,7 @@
 """
 
 from playwright.sync_api import sync_playwright
-from src.utils.error_monitor import monitor_errors
+from utils.error_monitor import monitor_errors
 
 
 def test_auto_continue_mode():

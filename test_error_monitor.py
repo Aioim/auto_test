@@ -4,7 +4,7 @@
 
 from playwright.sync_api import sync_playwright
 import logging
-from src.utils.error_monitor import monitor_errors, test_alert_screenshot
+from utils.error_monitor import monitor_errors, test_alert_screenshot
 
 # 配置日志
 logging.basicConfig(

@@ -452,7 +452,7 @@ if __name__ == "__main__":
     print("""
 # 基本使用示例
 from playwright.sync_api import sync_playwright
-from src.utils.error_monitor import monitor_errors
+from utils.error_monitor import monitor_errors
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
@@ -484,7 +484,7 @@ with sync_playwright() as p:
 
 # 高级使用示例
 from playwright.sync_api import sync_playwright
-from src.utils.error_monitor import monitor_errors
+from utils.error_monitor import monitor_errors
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
@@ -518,7 +518,7 @@ with sync_playwright() as p:
 
 # 测试弹窗截图功能
 from playwright.sync_api import sync_playwright
-from src.utils.error_monitor import test_alert_screenshot
+from utils.error_monitor import test_alert_screenshot
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
@@ -528,7 +528,7 @@ with sync_playwright() as p:
 
 # 自动继续模式示例
 from playwright.sync_api import sync_playwright
-from src.utils.error_monitor import monitor_errors
+from utils.error_monitor import monitor_errors
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)

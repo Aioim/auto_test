@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict, Any, Set
 import threading
-from src.config import PROJECT_ROOT
+from config import PROJECT_ROOT
 
 class ConfigLoader:
     """配置加载器"""

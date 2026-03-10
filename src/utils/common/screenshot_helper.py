@@ -20,8 +20,11 @@ from contextlib import contextmanager
 # 必须导入playwright
 from playwright.sync_api import Page, Locator, ElementHandle
 
-# 必须导入allure
-import allure
+# 可选依赖，使用try-except处理
+try:
+    import allure
+except ImportError:
+    allure = None
 
 from config import settings
 
@@ -1279,7 +1282,7 @@ class ScreenshotHelper:
             name: 截图名称
             metadata: 截图元数据
         """
-        if not self.enable_allure:
+        if not self.enable_allure or allure is None:
             return
 
         try:

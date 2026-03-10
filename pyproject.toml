@@ -19,13 +19,14 @@ dependencies = [
     "allure-python-commons>=2.13.0",
     "pyyaml>=6.0",
     "python-dotenv>=1.0.0",
+    "pydantic",
     
     # 数据库相关依赖
     "sqlalchemy>=2.0",
     "pymysql",
     "psycopg2-binary",
-    
-    # 可选依赖
+    "tqdm",
+    "faker",
     "psutil>=5.9.0",  # 用于环境检测
 ]
 
