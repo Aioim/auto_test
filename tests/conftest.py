@@ -5,10 +5,6 @@ from pathlib import Path
 from typing import List, Tuple, Any, Dict
 from functools import lru_cache
 import re
-
-# 添加src目录到Python路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 from config import PROJECT_ROOT, settings
 from utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
 from playwright.sync_api import sync_playwright

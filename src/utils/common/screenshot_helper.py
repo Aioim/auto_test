@@ -16,23 +16,11 @@ from datetime import datetime
 from pathlib import Path
 from enum import Enum
 from contextlib import contextmanager
-
-# 必须导入playwright
 from playwright.sync_api import Page, Locator, ElementHandle
-
-# 可选依赖，使用try-except处理
-try:
-    import allure
-except ImportError:
-    allure = None
-
+import allure
 from config import settings
-
-# 使用 LazyLogger 来获取日志实例，确保只初始化一次
 from utils.logger import logger
-
-# 导入 SelectorHelper 和 Selector 类型
-from src.utils.common.selector_helper import SelectorHelper, Selector, SelectorLike
+from utils.common.selector_helper import SelectorHelper, Selector, SelectorLike
 
 
 # ==================== 常量定义 ====================
@@ -1282,7 +1270,7 @@ class ScreenshotHelper:
             name: 截图名称
             metadata: 截图元数据
         """
-        if not self.enable_allure or allure is None:
+        if not self.enable_allure:
             return
 
         try:

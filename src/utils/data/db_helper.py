@@ -11,21 +11,9 @@ import logging
 from typing import Optional, Dict, Any, List, Tuple, Union
 from contextlib import contextmanager
 
-# 可选依赖，使用try-except处理
-try:
-    import pymysql
-except ImportError:
-    pymysql = None
-
-try:
-    import psycopg2
-except ImportError:
-    psycopg2 = None
-
-try:
-    import sqlite3
-except ImportError:
-    sqlite3 = None
+import pymysql
+import psycopg2
+import sqlite3
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
@@ -362,8 +350,6 @@ class DatabaseHelper:
             
             if db_type == 'mysql':
                 # MySQL 连接
-                if pymysql is None:
-                    raise ImportError("pymysql is not installed. Please install it with 'pip install pymysql'")
                 self._connections[key] = pymysql.connect(
                     host=host,
                     port=port or 3306,
@@ -374,8 +360,6 @@ class DatabaseHelper:
                 )
             elif db_type == 'postgresql':
                 # PostgreSQL 连接
-                if psycopg2 is None:
-                    raise ImportError("psycopg2 is not installed. Please install it with 'pip install psycopg2-binary'")
                 self._connections[key] = psycopg2.connect(
                     host=host,
                     port=port or 5432,
@@ -386,8 +370,6 @@ class DatabaseHelper:
                 )
             elif db_type == 'sqlite':
                 # SQLite 连接
-                if sqlite3 is None:
-                    raise ImportError("sqlite3 is not available in this Python installation")
                 db_path = database or ':memory:'
                 self._connections[key] = sqlite3.connect(db_path, **kwargs)
             else:

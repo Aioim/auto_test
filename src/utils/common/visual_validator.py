@@ -4,19 +4,11 @@
 提供图像比较、差异分析和视觉回归测试功能
 """
 import os
+import cv2
+import numpy as np
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple, List
 from enum import Enum
-
-# 可选依赖，使用try-except处理
-try:
-    import cv2
-    import numpy as np
-    CV2_AVAILABLE = True
-except ImportError:
-    cv2 = None
-    np = None
-    CV2_AVAILABLE = False
 
 from config import settings
 from utils.logger import logger
@@ -94,19 +86,8 @@ class VisualValidator:
         Returns:
             Dict[str, Any]: 验证结果，包含相似度、是否通过、差异图像路径等
         """
-        # 检查cv2是否可用
-        if not CV2_AVAILABLE:
-            logger.warning("OpenCV (cv2) 未安装，无法进行视觉验证")
-            return {
-                "success": False,
-                "message": "OpenCV (cv2) 未安装，无法进行视觉验证",
-                "similarity": 0.0,
-                "threshold": threshold or self.threshold,
-                "test_image": str(self.test_dir / test_image_name),
-                "baseline_image": str(self.baseline_dir / (baseline_image_name or test_image_name)),
-                "diff_image": None
-            }
-        
+       
+            
         # 使用默认值
         if not baseline_image_name:
             baseline_image_name = test_image_name
@@ -223,10 +204,6 @@ class VisualValidator:
         Returns:
             float: 相似度 (0-1)
         """
-        if not CV2_AVAILABLE:
-            logger.warning("OpenCV (cv2) 未安装，无法计算图像相似度")
-            return 0.0
-            
         if self.algorithm == ComparisonAlgorithm.MSE:
             return self._calculate_mse(img1, img2)
         elif self.algorithm == ComparisonAlgorithm.SSIM:

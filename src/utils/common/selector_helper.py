@@ -4,12 +4,7 @@ from dataclasses import dataclass, asdict, replace
 from typing import Optional, Any, List, Tuple, Dict, Union, Literal
 import json
 import time
-
-# 可选依赖，使用try-except处理
-try:
-    import allure
-except ImportError:
-    allure = None
+import allure
 
 from playwright.sync_api import Page, Locator, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 from config import settings
@@ -164,8 +159,6 @@ def _localize(selector: Selector) -> Selector:
 
 def _attach_to_allure(name: str, payload: Any, kind: str = "application/json"):
     """Attach structured info to Allure; defensive about failures."""
-    if allure is None:
-        return
     try:
         if kind == "application/json":
             content = json.dumps(payload, ensure_ascii=False, indent=2)
