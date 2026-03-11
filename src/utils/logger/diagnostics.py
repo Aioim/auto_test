@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Dict, Any, Tuple
 
 # 直接导入依赖模块
-from .config import LogConfig
+from config import settings
+LogConfig = settings.log
 
 # ==================== 诊断工具 ====================
 def diagnose_logger(logger_name: str = "automation") -> Dict[str, Any]:

@@ -9,7 +9,8 @@ from typing import Optional, Dict
 import threading
 
 # 直接导入依赖模块
-from .config import LogConfig
+from config import settings
+LogConfig = settings.log
 from .formatters import SecurityFormatter
 import os
 import tempfile
@@ -32,7 +33,7 @@ class HandlerFactory:
     def _ensure_log_dir(cls, target_dir: Optional[Path] = None) -> Path:
         """确保日志目录存在"""
         global _initialized_dirs, _first_init, _module_initialized, _module_lock, INITIALIZED_FLAG
-        log_dir = (target_dir or LogConfig.LOG_DIR).resolve()
+        log_dir = (target_dir or LogConfig.log_dir).resolve()
         try:
             with _module_lock:
                 if log_dir in _initialized_dirs:
@@ -42,7 +43,7 @@ class HandlerFactory:
                 was_first = _first_init
                 _first_init = False
                 _initialized_dirs.add(log_dir)
-                if was_first and not LogConfig.QUIET:
+                if was_first and not LogConfig.quiet:
                     import sys
                     print(f"✅ Secure logger initialized: {log_dir}", file=sys.stderr)
                 # 设置环境变量，标记已经初始化
@@ -51,7 +52,7 @@ class HandlerFactory:
                 return log_dir
         except Exception as e:
             error_msg = f"❌ Log directory initialization failed: {e} (path: {log_dir})"
-            if not LogConfig.QUIET:
+            if not LogConfig.quiet:
                 import sys
                 print(error_msg, file=sys.stderr)
             # 重新抛出异常，附带更详细的信息
@@ -88,7 +89,7 @@ class HandlerFactory:
                 filename=log_dir / filename,
                 when=kwargs.get("when", "midnight"),
                 interval=kwargs.get("interval", 1),
-                backupCount=LogConfig.BACKUP_COUNT,
+                backupCount=LogConfig.backup_count,
                 encoding="utf-8",
                 delay=False
             )
@@ -109,7 +110,7 @@ class HandlerFactory:
             
             handler = RotatingFileHandler(
                 filename=log_dir / filename,
-                maxBytes=kwargs.get("maxBytes", LogConfig.MAX_BYTES),
+                maxBytes=kwargs.get("maxBytes", LogConfig.max_bytes),
                 backupCount=kwargs.get("backupCount", 5),
                 encoding="utf-8",
                 delay=False

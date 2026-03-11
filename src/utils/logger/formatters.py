@@ -9,7 +9,8 @@ import inspect
 from pathlib import Path
 
 # 直接导入依赖模块
-from .config import LogConfig
+from config import settings
+LogConfig = settings.log
 from .security import mask_sensitive_data
 from .metrics import LogMetrics
 
@@ -29,7 +30,7 @@ class SecurityFormatter(logging.Formatter):
         original_module = record.module
         original_filename = record.filename
 
-        if LogConfig.REPLACE_MAIN_WITH_FILENAME and record.module == "__main__":
+        if LogConfig.replace_main_with_filename and record.module == "__main__":
             # 尝试从缓存获取
             if record.filename in self._main_module_cache:
                 record.module, record.filename = self._main_module_cache[record.filename]
@@ -106,7 +107,7 @@ class ColoredFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         color = self.LEVEL_COLORS.get(record.levelno, "")
-        if color and LogConfig.ENABLE_COLORS:
+        if color and LogConfig.enable_colors:
             original = record.levelname
             try:
                 record.levelname = f"{color}{record.levelname}{ColorCodes.RESET}"

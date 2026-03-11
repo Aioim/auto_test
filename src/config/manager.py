@@ -1,6 +1,7 @@
 import os
+import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Set, ClassVar
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, Field
 from .env_loader import EnvLoader
@@ -105,6 +106,24 @@ class LogConfig(BaseModel):
     log_dir: Path = PROJECT_ROOT / 'logs'
     log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
     log_file: str = 'test_run.log'
+    backup_count: int = 7
+    max_bytes: int = 10 * 1024 * 1024  # 10MB
+    perf_max_bytes: int = 5 * 1024 * 1024  # 5MB
+    enable_colors: bool = False
+    enable_emergency_response: bool = False
+    quiet: bool = False
+    replace_main_with_filename: bool = True
+    
+    # 敏感键集合
+    SENSITIVE_KEYS: ClassVar[Set[str]] = {
+        'password', 'pwd', 'pass', 'secret', 'token', 'api_key', 'apikey',
+        'authorization', 'cookie', 'x-api-key', 'access_token', 'refresh_token',
+        'new_password', 'old_password', 'confirm_password', 'credit_card',
+        'ssn', 'social_security', 'passport', 'cvv', 'pin', 'private_key'
+    }
+    
+    # 有效的日志级别
+    VALID_LOG_LEVELS: ClassVar[Set[str]] = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
 
     @field_validator("log_level")
     @classmethod
@@ -113,6 +132,57 @@ class LogConfig(BaseModel):
         if v not in valid_levels:
             raise ValueError(f"无效的日志级别: {v}, 必须是 {valid_levels}")
         return v
+
+    def initialize(self):
+        """初始化配置"""
+        # 确保日志目录存在
+        try:
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            if not self.quiet:
+                print(f"⚠️  Failed to create log directory: {e}", file=sys.stderr)
+
+    def _validate_config(self):
+        """验证配置"""
+        # 验证日志级别
+        if self.log_level not in self.VALID_LOG_LEVELS:
+            if not self.quiet:
+                print(f"⚠️  Invalid log level: {self.log_level}, using INFO instead", file=sys.stderr)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """获取配置值"""
+        try:
+            if key.upper() == 'LOG_DIR':
+                return self.log_dir
+            elif key.upper() == 'LOG_LEVEL':
+                return self.log_level
+            elif key.upper() == 'MAIN_LOG_FILE':
+                return self.log_file
+            elif key.upper() == 'BACKUP_COUNT':
+                return self.backup_count
+            elif key.upper() == 'MAX_BYTES':
+                return self.max_bytes
+            elif key.upper() == 'PERF_MAX_BYTES':
+                return self.perf_max_bytes
+            elif key.upper() == 'ENABLE_COLORS':
+                return self.enable_colors
+            elif key.upper() == 'ENABLE_EMERGENCY_RESPONSE':
+                return self.enable_emergency_response
+            elif key.upper() == 'QUIET':
+                return self.quiet
+            elif key.upper() == 'REPLACE_MAIN_WITH_FILENAME':
+                return self.replace_main_with_filename
+            elif key.upper() == 'SENSITIVE_KEYS':
+                return self.SENSITIVE_KEYS
+            else:
+                return default
+        except AttributeError:
+            return default
+
+    def refresh(self):
+        """刷新配置"""
+        # 由于配置从settings获取，不需要特殊处理
+        pass
 
     # 添加模型配置
     model_config = ConfigDict(protected_namespaces=())

@@ -7,7 +7,8 @@ from typing import Dict, List, Tuple
 import logging
 
 # 直接导入依赖模块
-from .config import LogConfig
+from config import settings
+LogConfig = settings.log
 from .metrics import LogMetrics
 
 class MaskingEngine:
@@ -123,7 +124,7 @@ class SensitiveDataFilter(logging.Filter):
         except Exception as e:
             LogMetrics.record("handler_errors")
             error_msg = f"⚠️  Sensitive data filter error: {e}"
-            if not LogConfig.QUIET:
+            if not LogConfig.quiet:
                 import sys
                 print(error_msg, file=sys.stderr)
             # 尝试记录错误

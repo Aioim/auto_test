@@ -12,7 +12,8 @@ import os
 from datetime import datetime, timezone
 
 # 直接导入依赖模块
-from .config import LogConfig
+from config import settings
+LogConfig = settings.log
 from .security import mask_sensitive_data
 from .utils import _get_actual_module_name, _get_caller_info
 
@@ -240,7 +241,7 @@ def log_exception(logger_param=None, exc: Optional[Exception] = None, context: s
         log.error("%s\nTraceback:\n%s", msg, tb)
     except Exception as e:
         error_msg = f"⚠️  Error in log_exception: {e}"
-        if not LogConfig.QUIET:
+        if not LogConfig.quiet:
             print(error_msg, file=sys.stderr)
         # 尝试使用基本日志记录
         try:
@@ -276,7 +277,7 @@ def log_security_event(
             "status": status,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "ip": os.getenv("CLIENT_IP", "unknown"),
-            "env": LogConfig.ENV,
+            "env": settings.env,
             "details": safe_details
         }
 

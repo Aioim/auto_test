@@ -24,7 +24,8 @@ class LazyLogger:
                 # 导入依赖
                 from .handlers import HandlerFactory
                 from .formatters import SecurityFormatter, ColoredFormatter
-                from .config import LogConfig
+                from config import settings
+                LogConfig = settings.log
 
                 logger = logging.getLogger(name)
                 
@@ -39,7 +40,7 @@ class LazyLogger:
                             pass
                     logger.handlers.clear()
 
-                level = getattr(logging, (kwargs.get('log_level') or LogConfig.LOG_LEVEL).upper(), logging.INFO)
+                level = getattr(logging, (kwargs.get('log_level') or LogConfig.log_level).upper(), logging.INFO)
                 logger.setLevel(level)
                 logger.propagate = False
                 logger.parent = None
@@ -60,7 +61,7 @@ class LazyLogger:
                     # 主日志器：test_run.log
                     if name == "automation":
                         logger.addHandler(HandlerFactory.create_handler(
-                            "timed", LogConfig.MAIN_LOG_FILE, logging.DEBUG
+                            "timed", LogConfig.log_file, logging.DEBUG
                         ))
                         # 错误日志（含堆栈）
                         logger.addHandler(HandlerFactory.create_handler(
@@ -68,7 +69,7 @@ class LazyLogger:
                             "error.log",
                             logging.ERROR,
                             fmt="%(asctime)s %(levelname)-8s [%(filename)s:%(funcName)s:%(lineno)d] %(message)s\nEXCEPTION: %(exc_info)s",
-                            maxBytes=LogConfig.MAX_BYTES
+                            maxBytes=LogConfig.max_bytes
                         ))
                     # 其他自定义日志器
                     elif kwargs.get('separate_log_file'):
@@ -78,9 +79,9 @@ class LazyLogger:
                         ))
 
                 # 初始化横幅
-                if name == "automation" and not LogConfig.QUIET:
+                if name == "automation" and not LogConfig.quiet:
                     logger.info("=" * 70)
-                    logger.info(f"✅ Secure Logger | Env: {LogConfig.ENV} | Level: {logging.getLevelName(level)}")
+                    logger.info(f"✅ Secure Logger | Env: {settings.env} | Level: {logging.getLevelName(level)}")
                     logger.info(f"⏰ UTC: {datetime.now(timezone.utc).isoformat()}")
                     logger.info("=" * 70)
 

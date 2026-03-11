@@ -11,7 +11,8 @@ from .metrics import LogMetrics
 from .utils import _get_caller_info, _get_actual_module_name, clear_caller_info_cache
 
 # 2. 然后导入配置模块
-from .config import LogConfig
+from config import settings
+LogConfig = settings.log
 
 # 3. 接着导入安全模块
 from .security import MaskingEngine, mask_sensitive_data
@@ -68,7 +69,7 @@ def _initialize_loggers():
             _initialized = True
         except Exception as e:
             # 回退到基本日志记录
-            if not LogConfig.QUIET:
+            if not LogConfig.quiet:
                 print(f"⚠️  Logger initialization fallback: {e}", file=sys.stderr)
             
             # 配置基本日志
@@ -127,7 +128,7 @@ def cleanup():
         # 重置指标
         LogMetrics.reset()
     except Exception as e:
-        if not LogConfig.QUIET:
+        if not LogConfig.quiet:
             print(f"⚠️  Cleanup error: {e}", file=sys.stderr)
 
 # 注册全局清理函数

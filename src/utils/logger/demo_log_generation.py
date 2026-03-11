@@ -12,7 +12,7 @@ from utils.logger import (
     logger, api_logger, perf_logger, security_logger,
     log_exception, log_security_event, log_step, log_duration, log_performance,
     mask_sensitive_data, request_logger, cleanup,
-    setup_logger, LogConfig
+    setup_logger
 )
 
 print("Log generation demo - generating various log files...")
