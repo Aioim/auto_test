@@ -7,7 +7,9 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, Fi
 from .env_loader import EnvLoader
 from .yaml_loader import YamlLoader
 from ._path import PROJECT_ROOT
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class _SettingsBase(BaseModel):
     """自定义设置基类，替代BaseSettings"""
@@ -224,8 +226,9 @@ class AppConfig(_SettingsBase):
     # 核心配置
     env: str = "beta"
     frontend_version: str = "v2026.01"
-    base_url: str = None
+    base_url: Optional[str] = None
     api_base_url: Optional[str] = None
+    login_url: Optional[str] = None
 
     # 敏感凭证 (通过.env加载)
     admin_username: str = ""
