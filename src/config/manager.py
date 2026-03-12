@@ -88,6 +88,9 @@ class BrowserConfig(BaseModel):
     type: str = "chromium"  # chromium/firefox/webkit
     enable_js: bool = True
     viewport: Dict[str, int] = {"width": 1920, "height": 1080}
+    permissions: list[str] = ["geolocation", "notifications", "clipboard-read"]
+    geolocation: Dict[str, float] = {"latitude": 31.2304, "longitude": 121.4737}
+    auth_dir: str = None
 
     @field_validator("type")
     @classmethod
@@ -242,10 +245,10 @@ class AppConfig(_SettingsBase):
     selector_strategy: str = "lenient"  # strict/lenient
     resource_cleanup_timeout: int = 5
     login_url: str = ""
-
-
+    #启动业务时间
+    time_now: datetime = datetime.now()
     # 截图输出路径
-    SCREENSHOT_DIR: Path = PROJECT_ROOT / "output/screenshots"
+    screenshot_dir: Path = PROJECT_ROOT / "output/screenshots"
     # 添加模型配置
     model_config = ConfigDict(protected_namespaces=())
 
