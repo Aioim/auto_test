@@ -30,7 +30,7 @@ def browser(playwright):
     作用域：session，整个测试会话只启动一次浏览器
     使用配置文件中指定的浏览器类型
     """
-    browser = getattr(playwright, settings.browser.type).launch(headless=settings.browser.headless)
+    browser = getattr(playwright, settings.BROWSER).launch(headless=settings.HEADLESS)
     yield browser
     browser.close()
 
@@ -55,7 +55,7 @@ def page(context):
     设置默认超时时间为配置文件中指定的值
     """
     page = context.new_page()
-    page.set_default_timeout(settings.timeouts.page_load)
+    page.set_default_timeout(settings.TIMEOUT)
     yield page
 
 
@@ -81,8 +81,6 @@ def db():
     db_helper.close()
 
 
-from utils.login_cache import login_cache
-
 @pytest.fixture(scope="function")
 def auth_token(api_client):
     """
@@ -90,20 +88,8 @@ def auth_token(api_client):
     作用域：function，每个测试函数获取一个新的 token
     使用配置文件中的默认用户信息登录
     """
-    # Try to get token from cache
-    cached_token = login_cache.get_token()
-    if cached_token:
-        return cached_token
-    
-    # Get new token
-    resp = api_client.post("/auth/login", json={"username": settings.default_user["username"], "password": settings.default_user["password"]})
-    token = resp.json().get("access_token")
-    
-    # Cache the token
-    if token:
-        login_cache.save_token(token)
-    
-    return token
+    resp = api_client.post("/auth/login", json={"username": settings.DEFAULT_USER["username"], "password": settings.DEFAULT_USER["password"]})
+    return resp.json().get("access_token")
 
 
 # ==================== 安全的YAML加载（带缓存） ====================
