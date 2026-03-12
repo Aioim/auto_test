@@ -159,16 +159,16 @@ class ScreenshotHelper:
     """
 
     # 从配置读取默认值（支持外部化配置）
-    DEFAULT_SCREENSHOT_DIR = getattr(settings, "SCREENSHOT_DIR", "screenshots")
-    DEFAULT_FORMAT = ScreenshotFormat(getattr(settings, "SCREENSHOT_FORMAT", "png"))
-    DEFAULT_QUALITY = getattr(settings, "SCREENSHOT_QUALITY", ScreenshotQuality.HIGH.value)
-    DEFAULT_TIMEOUT = getattr(settings, "SCREENSHOT_TIMEOUT", 5000)
-    HIGHLIGHT_WAIT_MS = getattr(settings, "HIGHLIGHT_WAIT_MS", 100)
+    DEFAULT_SCREENSHOT_DIR = getattr(settings, "screenshot_dir", "screenshots")
+    DEFAULT_FORMAT = ScreenshotFormat(getattr(settings, "screenshot_format", "png"))
+    DEFAULT_QUALITY = getattr(settings, "screenshot_quality", ScreenshotQuality.HIGH.value)
+    DEFAULT_TIMEOUT = getattr(settings, "screenshot_timeout", 5000)
+    HIGHLIGHT_WAIT_MS = getattr(settings, "highlight_wait_ms", 100)
 
     def __init__(
             self,
             page: Page,
-            screenshot_dir: Optional[str] = None,
+            screenshot_dir: Optional[str] = DEFAULT_SCREENSHOT_DIR,
             auto_cleanup: bool = False,
             max_screenshots: int = 100,
             enable_allure: bool = True
@@ -184,7 +184,7 @@ class ScreenshotHelper:
             enable_allure: 是否启用 Allure 集成（自动检测环境）
         """
         self.page = page
-        self.screenshot_dir = Path(screenshot_dir or self.DEFAULT_SCREENSHOT_DIR).resolve()
+        self.screenshot_dir = screenshot_dir
         self.auto_cleanup = auto_cleanup
         self.max_screenshots = max_screenshots
         self.enable_allure = enable_allure
@@ -1245,14 +1245,8 @@ class ScreenshotHelper:
             # 从缓存返回 Locator
             return self._locator_cache[selector]
         elif hasattr(selector, 'css') or hasattr(selector, 'xpath') or hasattr(selector, 'test_id') or hasattr(selector, 'role'):
-            # 检测是否为 Selector 对象（通过属性判断）
-            try:
-                # 动态导入 SelectorHelper 以避免循环导入问题
-                from src.utils.common.selector_helper import SelectorHelper
-                return SelectorHelper.resolve_locator(self.page, selector)
-            except Exception as e:
-                logger.error(f"Failed to resolve Selector object: {e}")
-                raise
+            from src.utils.common.selector_helper import SelectorHelper
+            return SelectorHelper.resolve_locator(self.page, selector)
         else:
             raise ValueError(f"Unsupported selector type: {type(selector)}")
 
@@ -1550,7 +1544,7 @@ if __name__=='__main__':
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
 
-        page.goto("https://baidu.com")
+        page.goto("https://www.baidu.com")
 
         # 创建辅助类实例
         helper = ScreenshotHelper(page)
