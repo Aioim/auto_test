@@ -5,12 +5,17 @@ timeouts:
   api: 15000         # API请求超时 (毫秒)
 
 browser:
-  headless: true     # 默认无头模式
+  headless: false     # 默认无头模式
   type: "chromium"   # 默认浏览器类型
   enable_js: true    # 启用JavaScript
+  permissions: [ "geolocation", "notifications", "clipboard-read" ]
+  geolocation:
+    latitude: 31.2304
+    longitude: 121.4737
   viewport:
     width: 1980
     height: 1080
+  auth_dir: output/auth_dir
 
 allure:
   auto_clean: true   # 自动清理旧报告
