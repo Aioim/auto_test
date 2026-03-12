@@ -168,7 +168,7 @@ class ScreenshotHelper:
     def __init__(
             self,
             page: Page,
-            screenshot_dir: Optional[str] = DEFAULT_SCREENSHOT_DIR,
+            screenshot_dir: Path = DEFAULT_SCREENSHOT_DIR,
             auto_cleanup: bool = False,
             max_screenshots: int = 100,
             enable_allure: bool = True
