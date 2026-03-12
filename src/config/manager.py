@@ -254,6 +254,14 @@ class AppConfig(_SettingsBase):
     screenshot_dir: Path = PROJECT_ROOT / "output/screenshots"
     # 添加模型配置
     model_config = ConfigDict(protected_namespaces=())
+    
+    # @field_validator("env")
+    # @classmethod
+    # def validate_env(cls, v):
+    #     valid_envs = ["alpha", "beta", "prod"]
+    #     if v not in valid_envs:
+    #         raise ValueError(f"无效环境: {v}, 必须是 {valid_envs}")
+    #     return v
 
     @field_validator("video_recording")
     @classmethod
