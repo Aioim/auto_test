@@ -21,7 +21,7 @@ allure:
   auto_clean: true   # 自动清理旧报告
   default_severity: "critical" # 默认严重级别
 
-logging:
+log:
   level: "info"      # 日志级别: debug/info/warning/error
 
 resource_cleanup:
