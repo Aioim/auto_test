@@ -1,0 +1,13 @@
+user_tests:
+  - id: test_user_1
+    username: test_user
+    password: password123
+    expected_result: success
+  - id: test_user_2
+    username: invalid_user
+    password: wrong_password
+    expected_result: failure
+  - id: test_user_3
+    username: admin
+    password: admin123
+    expected_result: success

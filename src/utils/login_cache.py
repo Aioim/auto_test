@@ -2,9 +2,13 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+
+# Add src directory to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 class LoginCache:
     """Login cache manager"""
@@ -171,3 +175,89 @@ class LoginCache:
 
 # Create a global instance
 login_cache = LoginCache()
+
+
+if __name__ == "__main__":
+    """Usage examples for LoginCache"""
+    print("=== LoginCache Usage Examples ===")
+    print()
+    
+    # Example 1: Basic token saving and retrieval
+    print("1. Basic token saving and retrieval:")
+    test_token = "test_token_12345"
+    print(f"   Saving token: {test_token}")
+    save_result = login_cache.save_token(test_token)
+    print(f"   Save result: {save_result}")
+    
+    retrieved_token = login_cache.get_token()
+    print(f"   Retrieved token: {retrieved_token}")
+    print(f"   Tokens match: {retrieved_token == test_token}")
+    print()
+    
+    # Example 2: Using custom keys
+    print("2. Using custom keys:")
+    user1_token = "user1_token_67890"
+    user2_token = "user2_token_09876"
+    
+    print(f"   Saving token for user1: {user1_token}")
+    login_cache.save_token(user1_token, key="user1")
+    
+    print(f"   Saving token for user2: {user2_token}")
+    login_cache.save_token(user2_token, key="user2")
+    
+    user1_retrieved = login_cache.get_token(key="user1")
+    user2_retrieved = login_cache.get_token(key="user2")
+    
+    print(f"   Retrieved token for user1: {user1_retrieved}")
+    print(f"   Retrieved token for user2: {user2_retrieved}")
+    print()
+    
+    # Example 3: Token expiry (using short expiry time)
+    print("3. Token expiry:")
+    temp_token = "temp_token_11111"
+    print(f"   Saving temporary token with 1 second expiry: {temp_token}")
+    login_cache.save_token(temp_token, key="temp", expiry_hours=0.0003)  # ~1 second
+    
+    print("   Retrieving token immediately:")
+    print(f"   Token: {login_cache.get_token(key='temp')}")
+    
+    print("   Waiting for 2 seconds...")
+    import time
+    time.sleep(2)
+    
+    print("   Retrieving token after expiry:")
+    expired_token = login_cache.get_token(key="temp")
+    print(f"   Token: {expired_token}")
+    print(f"   Token is expired: {expired_token is None}")
+    print()
+    
+    # Example 4: Clearing tokens
+    print("4. Clearing tokens:")
+    print("   Clearing default token:")
+    login_cache.clear_token()
+    print(f"   Default token after clearing: {login_cache.get_token()}")
+    
+    print("   Clearing user1 token:")
+    login_cache.clear_token(key="user1")
+    print(f"   User1 token after clearing: {login_cache.get_token(key='user1')}")
+    print()
+    
+    # Example 5: Getting cache info
+    print("5. Getting cache info:")
+    cache_info = login_cache.get_cache_info()
+    print(f"   Cache status: {cache_info['status']}")
+    print(f"   Cache file: {cache_info.get('cache_file', 'N/A')}")
+    print(f"   Number of tokens: {len(cache_info['tokens'])}")
+    for token in cache_info['tokens']:
+        print(f"   - Key: {token['key']}, Expiry: {token['expiry']}")
+    print()
+    
+    # Example 6: Clearing all tokens
+    print("6. Clearing all tokens:")
+    login_cache.clear_all()
+    cache_info = login_cache.get_cache_info()
+    print(f"   Cache status after clearing all: {cache_info['status']}")
+    print(f"   Number of tokens after clearing all: {len(cache_info['tokens'])}")
+    print()
+    
+    print("=== Examples completed ===")

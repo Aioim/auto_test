@@ -2,14 +2,14 @@ import pytest
 import warnings
 import sys
 from pathlib import Path
-from typing import List, Tuple, Any, Dict
+from typing import List, Tuple, Any, Dict, Optional
 from functools import lru_cache
 import re
 from config import PROJECT_ROOT, settings
 from utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
 from playwright.sync_api import sync_playwright
 from utils.api_client import APIClient
-
+from utils.common.smart_login import SmartLogin
 from utils.data.db_helper import DatabaseHelper
 
 
@@ -65,7 +65,11 @@ def api_client():
     创建 API 客户端实例
     作用域：function，每个测试函数创建一个新的客户端
     """
-    client = APIClient(base_url=settings.API_BASE_URL)
+    api_base_url = getattr(settings, "api_base_url", None)
+    if not api_base_url:
+        pytest.skip("API 基础 URL 未配置")
+    
+    client = APIClient(base_url=api_base_url)
     yield client
     client.close()
 
@@ -76,7 +80,24 @@ def db():
     创建数据库 helper 实例
     作用域：function，每个测试函数创建一个新的数据库连接
     """
-    db_helper = DatabaseHelper(settings.DB_HOST, settings.DB_PORT, settings.DB_NAME, settings.DB_USER, settings.DB_PASSWORD)
+    # 检查数据库配置
+    required_db_configs = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]
+    missing_configs = []
+    
+    for config in required_db_configs:
+        if not getattr(settings, config, None):
+            missing_configs.append(config)
+    
+    if missing_configs:
+        pytest.skip(f"缺少数据库配置: {', '.join(missing_configs)}")
+    
+    db_helper = DatabaseHelper(
+        host=settings.DB_HOST,
+        port=settings.DB_PORT,
+        database=settings.DB_NAME,
+        user=settings.DB_USER,
+        password=settings.DB_PASSWORD
+    )
     yield db_helper
     db_helper.close()
 
@@ -96,7 +117,14 @@ def auth_token(api_client):
         return cached_token
     
     # Get new token
-    resp = api_client.post("/auth/login", json={"username": settings.default_user["username"], "password": settings.default_user["password"]})
+    default_user = getattr(settings, "default_user", {})
+    username = default_user.get("username", "")
+    password = default_user.get("password", "")
+    
+    if not username or not password:
+        pytest.skip("默认用户信息未配置，无法获取认证 token")
+    
+    resp = api_client.post("/auth/login", json={"username": username, "password": password})
     token = resp.json().get("access_token")
     
     # Cache the token
@@ -104,6 +132,55 @@ def auth_token(api_client):
         login_cache.save_token(token)
     
     return token
+
+
+@pytest.fixture(scope="function")
+def smart_login():
+    """
+    智能登录 fixture
+    作用域：function，每个测试函数获取一个新的登录实例
+    使用配置文件中的默认用户信息登录
+    """
+    # 尝试导入 login_page
+    try:
+        from pages.components.login_page import login_page
+        login_func = login_page
+    except ImportError:
+        # 如果 login_page 模块不存在，使用默认的登录函数
+        def default_login(username, password):
+            from playwright.sync_api import Page
+            page: Page = SmartLogin.page
+            if page:
+                page.goto(settings.login_url or settings.base_url)
+                # 这里可以添加默认的登录逻辑
+                page.fill("input[name='username']", username)
+                page.fill("input[name='password']", password)
+                page.click("button[type='submit']")
+        login_func = default_login
+    
+    # 确保默认用户信息存在
+    default_user = getattr(settings, "default_user", {})
+    username = default_user.get("username", "")
+    password = default_user.get("password", "")
+    
+    smart_login_instance = SmartLogin(
+        username=username,
+        password=password,
+        login_func=login_func
+    )
+    yield smart_login_instance
+    smart_login_instance.stop_browser()
+
+
+@pytest.fixture(scope="function")
+def logged_in_page(smart_login):
+    """
+    已登录的页面对象
+    作用域：function，每个测试函数获取一个新的已登录页面
+    """
+    page = smart_login.smart_login()
+    yield page
+    # 页面会在 smart_login fixture 中自动关闭
 
 
 # ==================== 安全的YAML加载（带缓存） ====================
