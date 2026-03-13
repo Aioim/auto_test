@@ -250,6 +250,7 @@ class SmartLogin:
                     logger.info("⚠️ 登录状态已失效，重新登录...")
                     if os.path.exists(self.auth_file):
                         os.remove(self.auth_file)
+                        self.page.close()
                     self.login()
                     self.save_state()
                 else:
