@@ -4,7 +4,7 @@ from typing import Callable, Optional, Any, Tuple, List, Dict
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, Playwright
 from config import settings, PROJECT_ROOT
 from pages.components.login_page import login_page
-from utils.logger import logger as default_logger
+from utils.logger import logger
 
 class SmartLogin:
     def __init__(
@@ -13,8 +13,6 @@ class SmartLogin:
         password: str,
         login_func: Callable[[Page, str, str], None],
         auth_identity: Optional[str] = None,
-        logger=default_logger,
-        config=settings,
     ):
         """
         智能登录初始化
@@ -29,8 +27,6 @@ class SmartLogin:
         self.username = username
         self.password = password
         self.login_func = login_func
-        self.logger = logger
-        self.config = config
         self.auth_identity = auth_identity or username
         self.auth_file = self._get_auth_file()
 
@@ -41,13 +37,13 @@ class SmartLogin:
 
         self.is_browser_started = False
         self.ignore_dialog = {
-            "permissions": self.config.browser.permissions,
-            "geolocation": self.config.browser.geolocation,
-            "viewport": self.config.browser.viewport,
+            "permissions": settings.browser.permissions,
+            "geolocation": settings.browser.geolocation,
+            "viewport": settings.browser.viewport,
         }
 
     def _get_auth_file(self) -> str:
-        auth_dir = PROJECT_ROOT / self.config.browser.auth_dir
+        auth_dir = PROJECT_ROOT / settings.browser.auth_dir
         auth_dir.mkdir(exist_ok=True, parents=True)
         return str(auth_dir / f"auth_{self.auth_identity}.json")
 
@@ -60,9 +56,9 @@ class SmartLogin:
                 headless=headless, args=['--no-sandbox', '--disable-dev-shm-usage']
             )
             self.is_browser_started = True
-            self.logger.info("✅ 浏览器已启动")
+            logger.info("✅ 浏览器已启动")
         except Exception as e:
-            self.logger.error(f"❌ 浏览器启动失败：{e}")
+            logger.error(f"❌ 浏览器启动失败：{e}")
             self.is_browser_started = False
             self._stop_playwright_safely()
             raise
@@ -73,9 +69,9 @@ class SmartLogin:
         if self.browser:
             try:
                 self.browser.close()
-                self.logger.info("🛑 浏览器已关闭")
+                logger.info("🛑 浏览器已关闭")
             except Exception as e:
-                self.logger.error(f"❌ 关闭浏览器失败：{e}")
+                logger.error(f"❌ 关闭浏览器失败：{e}")
         self._stop_playwright_safely()
         self.is_browser_started = False
 
@@ -84,7 +80,7 @@ class SmartLogin:
             try:
                 self.page.close()
             except Exception as e:
-                self.logger.warning(f"⚠️ 关闭页面失败: {e}")
+                logger.warning(f"⚠️ 关闭页面失败: {e}")
             finally:
                 self.page = None
 
@@ -93,7 +89,7 @@ class SmartLogin:
             try:
                 self.context.close()
             except Exception as e:
-                self.logger.warning(f"⚠️ 关闭上下文失败: {e}")
+                logger.warning(f"⚠️ 关闭上下文失败: {e}")
             finally:
                 self.context = None
 
@@ -101,38 +97,38 @@ class SmartLogin:
         if self.playwright:
             try:
                 self.playwright.stop()
-                self.logger.info("🛑 Playwright 已停止")
+                logger.info("🛑 Playwright 已停止")
             except Exception as e:
-                self.logger.error(f"❌ 停止 Playwright 失败：{e}")
+                logger.error(f"❌ 停止 Playwright 失败：{e}")
             finally:
                 self.playwright = None
 
     def save_state(self):
         if self.context is None:
-            self.logger.warning("⚠️ 没有可保存的上下文状态")
+            logger.warning("⚠️ 没有可保存的上下文状态")
             return
         try:
             self.context.storage_state(path=self.auth_file)
-            self.logger.info(f"💾 账号 {self.auth_identity} 状态已保存")
+            logger.info(f"💾 账号 {self.auth_identity} 状态已保存")
         except Exception as e:
-            self.logger.error(f"❌ 保存状态失败：{e}")
+            logger.error(f"❌ 保存状态失败：{e}")
 
     def load_state(self) -> bool:
         if not os.path.exists(self.auth_file):
-            self.logger.info(f"📁 未找到状态文件：{self.auth_file}")
+            logger.info(f"📁 未找到状态文件：{self.auth_file}")
             return False
         try:
             self.context = self.browser.new_context(**self.ignore_dialog, storage_state=self.auth_file)
             self.page = self.context.new_page()
-            self.logger.info(f"✅ 已加载账号 {self.auth_identity} 的登录状态")
+            logger.info(f"✅ 已加载账号 {self.auth_identity} 的登录状态")
             return True
         except Exception as e:
-            self.logger.warning(f"⚠️ 加载状态失败：{e}")
+            logger.warning(f"⚠️ 加载状态失败：{e}")
             # 备份旧状态文件，防止丢失
             bak_file = self.auth_file + ".bak"
             if os.path.exists(self.auth_file):
                 os.replace(self.auth_file, bak_file)
-                self.logger.warning(f"⚠️ 状态文件已备份为 {bak_file}")
+                logger.warning(f"⚠️ 状态文件已备份为 {bak_file}")
             return False
 
     def login(self):
@@ -140,29 +136,29 @@ class SmartLogin:
             self.context = self.browser.new_context(**self.ignore_dialog)
             self.page = self.context.new_page()
             self.login_func(self.page, self.username, self.password)
-            self.logger.info(f"✅ 账号 {self.auth_identity} 登录成功")
+            logger.info(f"✅ 账号 {self.auth_identity} 登录成功")
         except Exception as e:
-            self.logger.error(f"❌ 登录失败：{e}")
+            logger.error(f"❌ 登录失败：{e}")
             raise
 
     def smart_login(self) -> Page:
         try:
             self.start_browser()
-            base_url = getattr(self.config, "base_url", None)
+            base_url = getattr(settings, "base_url", None)
             if not base_url:
-                self.logger.error("❌ 未配置 base_url")
+                logger.error("❌ 未配置 base_url")
                 raise ValueError("base_url 未配置")
             if self.load_state():
                 self.page.goto(base_url)
                 if "login" in self.page.url.lower():
-                    self.logger.info("⚠️ 登录状态已失效，重新登录...")
+                    logger.info("⚠️ 登录状态已失效，重新登录...")
                     self._close_page_safely()
                     self._close_context_safely()
                     # 状态文件已备份
                     self.login()
                     self.save_state()
                 else:
-                    self.logger.info("✅ 登录状态有效")
+                    logger.info("✅ 登录状态有效")
             else:
                 self.login()
                 self.save_state()
@@ -182,25 +178,25 @@ class SmartLogin:
             result = task_func(page, self.context, *args, **kwargs)
             return result
         except Exception as e:
-            self.logger.error(f"❌ execute_with_login失败：{e}")
+            logger.error(f"❌ execute_with_login失败：{e}")
             raise
         finally:
             self.stop_browser()
 
-    def execute_multiple_tasks(self, tasks: List[Callable[[Page, BrowserContext], Any]]) -> List[Dict[str, Any]]:
+    def execute_multiple_tasks(self, tasks: List[Callable[[Page, BrowserContext,Any], Any]]) -> List[Dict[str, Any]]:
         """
         批量执行多个任务，收集结果和异常
         """
         results = []
         for i, task in enumerate(tasks, 1):
-            self.logger.info(f"开始执行任务 {i}...")
+            logger.info(f"开始执行任务 {i}...")
             try:
                 res = self.execute_with_login(task)
                 results.append({"task": i, "success": True, "result": res})
-                self.logger.info(f"任务 {i} 执行完成")
+                logger.info(f"任务 {i} 执行完成")
             except Exception as e:
                 results.append({"task": i, "success": False, "error": str(e)})
-                self.logger.error(f"任务 {i} 执行失败: {e}")
+                logger.error(f"任务 {i} 执行失败: {e}")
         return results
 
     def __enter__(self) -> Tuple[Page, BrowserContext]:
@@ -217,16 +213,11 @@ class SmartLogin:
         return False  # 不吞异常
 
 if __name__ == '__main__':
-    def simple_login(page: Page, username: str, password: str):
-        # 应用实际的登录逻辑
-        login_page(page, username, password)
 
     smart_login = SmartLogin(
         username="username",
         password="password",
-        login_func=simple_login,
-        logger=default_logger,
-        config=settings
+        login_func=login_page,
     )
     page = smart_login.smart_login()
     page.pause()
