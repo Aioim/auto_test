@@ -28,16 +28,12 @@ dependencies = [
     "tqdm",
     "faker",
     "psutil>=5.9.0",  # 用于环境检测
+    "allure-pytest",
+    "cryptography"
+    
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "black",
-    "mypy",
-    "ruff",
-    "allure-pytest>=2.13.0",  # 用于测试报告
-]
+
 
 [tool.setuptools.packages.find]
 where = ["src"]
