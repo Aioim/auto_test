@@ -9,8 +9,7 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 from pathlib import Path
 import time
 import traceback
-import logging
-from src.utils.logger import logger
+from utils.logger import logger
 
 
 class ErrorMonitor:

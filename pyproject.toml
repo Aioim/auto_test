@@ -20,6 +20,7 @@ dependencies = [
     "pyyaml>=6.0",
     "python-dotenv>=1.0.0",
     "pydantic",
+    "allure-pytest",
     
     # 数据库相关依赖
     "sqlalchemy>=2.0",
@@ -27,13 +28,20 @@ dependencies = [
     "psycopg2-binary",
     "tqdm",
     "faker",
-    "psutil>=5.9.0",  # 用于环境检测
-    "allure-pytest",
+
+    # 用于环境检测
+    "psutil>=5.9.0",  
+
+    # 其他
+    "opencv-python", # 额外功能（如 SIFT、SURF 等），可安装扩展包 pip install opencv-contrib-python
+    "numpy",
     "cryptography"
     
 ]
 
-
+[project.optional-dependencies]
+dev = [
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

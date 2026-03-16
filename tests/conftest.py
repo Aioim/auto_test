@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 from utils.api_client import APIClient
 from utils.common.smart_login import SmartLogin
 from utils.data.db_helper import DatabaseHelper
-
+from utils import login_cache
 
 @pytest.fixture(scope="session")
 def playwright():
@@ -102,7 +102,7 @@ def db():
     db_helper.close()
 
 
-from utils.login_cache import login_cache
+
 
 @pytest.fixture(scope="function")
 def auth_token(api_client):
