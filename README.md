@@ -142,28 +142,58 @@ auto_test/
 - `components/`：可复用组件
 - `baidu_page.py`：示例页面实现
 
-### 3. 工具模块
+### 工具模块
+
+#### 公共 API
+
+`utils` 模块提供了统一的公共 API，可以通过 `from utils import ...` 直接导入所需功能：
+
+```python
+# 核心工具
+from utils import APIClient, login_cache, ErrorMonitor, monitor_errors
+
+# 通用工具
+from utils import ScreenshotHelper, SelectorHelper, VisualValidator, RealtimeLogMonitor
+
+# 数据工具
+from utils import load_yaml_file, TestDataGenerator, DatabaseHelper
+
+# 日志系统
+from utils import logger, setup_logger, log_exception, log_step
+
+# 安全工具
+from utils import SecretsManager, SecretStr, get_secret, set_secret
+```
 
 #### 通用工具 (`utils/common/`)
 - `screenshot_helper.py`：高级截图功能（支持元素高亮、标注）
 - `selector_helper.py`：智能选择器辅助
 - `visual_validator.py`：视觉验证工具
+- `smart_login.py`：智能登录功能，支持登录状态持久化
 
 #### 数据工具 (`utils/data/`)
 - `data_faker.py`：测试数据生成
 - `data_loader.py`：数据加载
 - `yaml_cases_loader.py`：YAML 测试用例加载
+- `db_helper.py`：数据库操作助手
 
 #### 日志系统 (`utils/logger/`)
 - 支持多级别日志
 - 结构化日志输出
 - 日志轮转和归档
 - 安全日志脱敏
+- 企业级安全日志系统
 
 #### 安全工具 (`utils/security/`)
 - `env_encrypt.py`：环境变量加密
 - `secrets_manager.py`：密钥管理
 - `key_rotation.py`：密钥轮换
+- `secret_str.py`：防泄露敏感字符串容器
+
+#### 核心工具
+- `api_client.py`：API 测试客户端，支持请求重试、响应断言
+- `login_cache.py`：登录 token 缓存管理
+- `error_monitor.py`：错误监控装饰器，支持页面错误捕获和截图
 
 ## 测试用例编写
 
@@ -172,13 +202,24 @@ auto_test/
 ```python
 import pytest
 from pages.baidu_page import BaiduPage
+from utils import logger, log_step
 
 def test_baidu_search(page):
     """测试百度搜索功能"""
+    logger.info("开始测试百度搜索功能")
+    
     baidu_page = BaiduPage(page)
-    baidu_page.navigate()
-    baidu_page.search("Playwright")
-    assert baidu_page.is_search_result_displayed()
+    
+    with log_step("导航到百度首页"):
+        baidu_page.navigate()
+    
+    with log_step("执行搜索"):
+        baidu_page.search("Playwright")
+    
+    with log_step("验证搜索结果"):
+        assert baidu_page.is_search_result_displayed()
+    
+    logger.info("百度搜索测试完成")
 ```
 
 ### 数据驱动测试
@@ -188,6 +229,7 @@ def test_baidu_search(page):
 ```python
 import pytest
 from pages.login_page import LoginPage
+from utils import load_yaml_file
 
 def test_login_with_data(page, yaml_data):
     """使用数据驱动测试登录功能"""
@@ -195,6 +237,70 @@ def test_login_with_data(page, yaml_data):
     login_page.navigate()
     login_page.login(yaml_data["username"], yaml_data["password"])
     assert login_page.is_logged_in()
+```
+
+### 智能登录测试
+
+使用智能登录功能进行测试：
+
+```python
+import pytest
+from pages.dashboard_page import DashboardPage
+
+def test_dashboard_access(logged_in_page):
+    """测试登录后访问仪表盘"""
+    dashboard_page = DashboardPage(logged_in_page)
+    dashboard_page.navigate()
+    assert dashboard_page.is_dashboard_displayed()
+    assert "dashboard" in logged_in_page.url.lower()
+```
+
+### API 测试
+
+使用 API 客户端进行测试：
+
+```python
+import pytest
+from utils import APIClient
+
+def test_api_endpoint(api_client):
+    """测试 API 端点"""
+    # 发送 GET 请求
+    response = api_client.get("/api/test")
+    # 验证状态码
+    api_client.assert_status(response, 200)
+    # 验证响应字段
+    api_client.assert_field_exists(response, "data")
+    # 验证响应时间
+    api_client.assert_response_time(response, 2.0)
+```
+
+### 错误监控测试
+
+使用错误监控装饰器捕获页面错误：
+
+```python
+import pytest
+from utils import monitor_errors
+
+def test_with_error_monitoring(page):
+    """测试错误监控功能"""
+    
+    @monitor_errors(
+        page=page,
+        screenshot_on_error=True,
+        screenshot_dir="./screenshots",
+        raise_on_error=True
+    )
+    def test_login_flow():
+        """测试登录流程"""
+        page.goto("https://example.com/login")
+        page.fill("#username", "testuser")
+        page.fill("#password", "password")
+        page.click("#login-button")
+        page.wait_for_load_state("networkidle")
+    
+    test_login_flow()
 ```
 
 ## 配置管理
