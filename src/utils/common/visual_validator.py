@@ -4,13 +4,7 @@
 提供图像比较、差异分析和视觉回归测试功能
 """
 import os
-# 可选依赖，使用try-except处理
-try:
-    import cv2
-    CV2_AVAILABLE = True
-except ImportError:
-    cv2 = None
-    CV2_AVAILABLE = False
+import cv2
 import numpy as np
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple, List
