@@ -24,11 +24,18 @@ IS_WINDOWS = platform.system() == "Windows"
 class RealtimeLogMonitor:
     """实时日志文件扫描（检测脱敏失败）"""
 
-    PASSWORD_PATTERNS = [
-        re.compile(r'(?i)(password|pwd|pass)[=:]\s*["\']?([a-zA-Z0-9!@#$%^&*()_+\-]{8,})', re.UNICODE),
-        re.compile(r'(?i)(token|secret)[=:]\s*["\']?([a-zA-Z0-9\-_\.]{30,})', re.UNICODE),
-        re.compile(r'(?i)bearer\s+([a-zA-Z0-9\-_\.]{30,})', re.IGNORECASE),
-        re.compile(r'(?i)(api[_-]?key)[=:]\s*["\']?([a-zA-Z0-9\-_]{20,})', re.UNICODE),
+    SENSITIVE_PATTERNS = [
+        # 密码：增加单词边界，扩大字符集，统一使用 re.I 标志
+        re.compile(r'\b(password|pwd|pass)[=:]\s*["\']?([^\s"\'\n]{8,})', re.IGNORECASE),
+
+        # Token/Secret：允许 Base64 常见字符 (+ /)，长度阈值可调整
+        re.compile(r'\b(token|secret)[=:]\s*["\']?([a-zA-Z0-9\-_\.+/]{30,})', re.IGNORECASE),
+
+        # Bearer Token：移除冗余标志，优化空白匹配
+        re.compile(r'\bbearer\s+([a-zA-Z0-9\-_\.+/]{30,})', re.IGNORECASE),
+
+        # API Key：支持 apikey, api_key, api-key
+        re.compile(r'\b(api[_\-]?key)[=:]\s*["\']?([a-zA-Z0-9\-_+/]{20,})', re.IGNORECASE),
     ]
 
     SAFE_PATTERNS = [
@@ -138,7 +145,7 @@ class RealtimeLogMonitor:
             if any(safe in line.lower() for safe in self.SAFE_PATTERNS):
                 continue
 
-            for pattern in self.PASSWORD_PATTERNS:
+            for pattern in self.SENSITIVE_PATTERNS:
                 match = pattern.search(line)
                 if match:
                     password_preview = (match.group(2)[:4] + "...") if len(match.group(2)) > 4 else "****"
