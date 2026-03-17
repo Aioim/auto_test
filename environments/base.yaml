@@ -9,6 +9,7 @@ browser:
   type: "chromium"   # 默认浏览器类型
   enable_js: true    # 启用JavaScript
   permissions: [ "geolocation", "notifications", "clipboard-read" ]
+  locale: str: "zh-CN"
   geolocation:
     latitude: 31.2304
     longitude: 121.4737
