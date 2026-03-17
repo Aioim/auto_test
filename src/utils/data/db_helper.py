@@ -74,8 +74,19 @@ class DatabaseHelper:
         Returns:
             str: 数据库连接字符串
         """
+        # 参数验证
+        if not db_type:
+            raise ValueError("Database type is required")
+        
         if db_type not in self.DB_TYPES:
             raise ValueError(f"Unsupported database type: {db_type}")
+        
+        # 验证必要参数
+        if db_type != 'sqlite':
+            if not host:
+                raise ValueError("Host is required for non-SQLite databases")
+            if not database:
+                raise ValueError("Database name is required for non-SQLite databases")
         
         if db_type == 'sqlite':
             # SQLite 连接字符串
@@ -104,8 +115,14 @@ class DatabaseHelper:
             
             # 添加其他参数
             if kwargs:
+                # 添加连接超时参数
+                if 'connect_timeout' not in kwargs:
+                    kwargs['connect_timeout'] = 30
                 params = '&'.join([f"{k}={v}" for k, v in kwargs.items()])
                 connection_parts.append(f"?{params}")
+            else:
+                # 默认添加连接超时参数
+                connection_parts.append("?connect_timeout=30")
             
             return f"{self.DB_TYPES[db_type]}://{''.join(connection_parts)}"
     
@@ -333,6 +350,60 @@ class DatabaseHelper:
                 return result.rowcount
             except SQLAlchemyError as e:
                 logger.error(f"Delete data error: {e}")
+                raise
+    
+    def batch_insert_data(self, db_type: str, table: str, data_list: List[Dict[str, Any]],
+                        host: Optional[str] = None, port: Optional[int] = None,
+                        database: Optional[str] = None, user: Optional[str] = None,
+                        password: Optional[str] = None, **kwargs) -> int:
+        """
+        批量插入数据
+        
+        Args:
+            db_type: 数据库类型 (mysql, postgresql, sqlite)
+            table: 表名
+            data_list: 要插入的数据列表
+            host: 数据库主机
+            port: 数据库端口
+            database: 数据库名称
+            user: 数据库用户
+            password: 数据库密码
+            **kwargs: 其他连接参数
+            
+        Returns:
+            int: 影响的行数
+        """
+        if not data_list:
+            return 0
+        
+        # 获取所有字段名
+        columns = list(data_list[0].keys())
+        columns_str = ', '.join(columns)
+        
+        # 生成占位符
+        placeholders = []
+        params = {}
+        
+        for i, data in enumerate(data_list):
+            row_placeholders = []
+            for j, col in enumerate(columns):
+                param_name = f"{col}_{i}"
+                row_placeholders.append(f":{param_name}")
+                params[param_name] = data[col]
+            placeholders.append(f"({', '.join(row_placeholders)})")
+        
+        # 生成批量插入语句
+        placeholders_str = ', '.join(placeholders)
+        sql = f"INSERT INTO {table} ({columns_str}) VALUES {placeholders_str}"
+        
+        with self.get_session(
+            db_type, host, port, database, user, password, **kwargs
+        ) as session:
+            try:
+                result = session.execute(text(sql), params)
+                return result.rowcount
+            except SQLAlchemyError as e:
+                logger.error(f"Batch insert data error: {e}")
                 raise
     
     def get_connection(self, db_type: str, host: Optional[str] = None, port: Optional[int] = None,
@@ -575,4 +646,30 @@ def get_session(db_type: str, host: Optional[str] = None, port: Optional[int] = 
     """
     return db_helper.get_session(
         db_type, host, port, database, user, password, **kwargs
+    )
+
+
+def batch_insert_data(db_type: str, table: str, data_list: List[Dict[str, Any]],
+                     host: Optional[str] = None, port: Optional[int] = None,
+                     database: Optional[str] = None, user: Optional[str] = None,
+                     password: Optional[str] = None, **kwargs) -> int:
+    """
+    批量插入数据的便捷函数
+    
+    Args:
+        db_type: 数据库类型 (mysql, postgresql, sqlite)
+        table: 表名
+        data_list: 要插入的数据列表
+        host: 数据库主机
+        port: 数据库端口
+        database: 数据库名称
+        user: 数据库用户
+        password: 数据库密码
+        **kwargs: 其他连接参数
+        
+    Returns:
+        int: 影响的行数
+    """
+    return db_helper.batch_insert_data(
+        db_type, table, data_list, host, port, database, user, password, **kwargs
     )
