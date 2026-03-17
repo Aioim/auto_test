@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, List, Optional, Union
 from playwright.sync_api import Page, Locator, TimeoutError as PlaywrightTimeoutError
-from utils.common.logger import logger
+from utils.logger import logger
 
 # ==================== 同步版本 ====================
 
