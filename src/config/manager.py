@@ -91,6 +91,7 @@ class BrowserConfig(BaseModel):
     type: str = "chromium"  # chromium/firefox/webkit
     enable_js: bool = True
     viewport: Dict[str, int] = {"width": 1920, "height": 1080}
+    locale: str = "zh-CN"
     permissions: list[str] = ["geolocation", "notifications", "clipboard-read"]
     geolocation: Dict[str, float] = {"latitude": 31.2304, "longitude": 121.4737}
     auth_dir: str = None
