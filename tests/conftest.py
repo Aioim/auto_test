@@ -91,51 +91,50 @@ def db():
     if missing_configs:
         pytest.skip(f"缺少数据库配置: {', '.join(missing_configs)}")
     
-    db_helper = DatabaseHelper(
-        host=settings.DB_HOST,
-        port=settings.DB_PORT,
-        database=settings.DB_NAME,
-        user=settings.DB_USER,
-        password=settings.DB_PASSWORD
-    )
+    # 获取数据库类型，默认为 mysql
+    db_type = getattr(settings, "DB_TYPE", "mysql")
+    
+    db_helper = DatabaseHelper()
     yield db_helper
-    db_helper.close()
+    db_helper.close_all()
 
 
 
 
 @pytest.fixture(scope="function")
-def auth_token(api_client):
+def auth_token(api_client, username: str = None):
     """
     获取认证 token
     作用域：function，每个测试函数获取一个新的 token
     使用配置文件中的默认用户信息登录
     """
+    # 获取用户名
+    default_user = getattr(settings, "default_user", {})
+    username = username or default_user.get("username", "default")
+    
     # Try to get token from cache
-    cached_token = login_cache.get_token()
+    cached_token = login_cache.get_token(key=username)
     if cached_token:
         return cached_token
     
     # Get new token
-    default_user = getattr(settings, "default_user", {})
-    username = default_user.get("username", "")
     password = default_user.get("password", "")
     
-    if not username or not password:
-        pytest.skip("默认用户信息未配置，无法获取认证 token")
+    if not password:
+        pytest.skip("默认用户密码未配置，无法获取认证 token")
     
     resp = api_client.post("/auth/login", json={"username": username, "password": password})
     token = resp.json().get("access_token")
     
     # Cache the token
     if token:
-        login_cache.save_token(token)
+        login_cache.save_token(token, key=username)
     
     return token
 
 
 @pytest.fixture(scope="function")
-def smart_login():
+def smart_login(username: str = None, password: str = None):
     """
     智能登录 fixture
     作用域：function，每个测试函数获取一个新的登录实例
@@ -158,10 +157,11 @@ def smart_login():
                 page.click("button[type='submit']")
         login_func = default_login
     
-    # 确保默认用户信息存在
-    default_user = getattr(settings, "default_user", {})
-    username = default_user.get("username", "")
-    password = default_user.get("password", "")
+    # 如果没有提供用户名和密码，从配置中获取
+    if not username or not password:
+        default_user = getattr(settings, "default_user", {})
+        username = username or default_user.get("username", "")
+        password = password or default_user.get("password", "")
     
     smart_login_instance = SmartLogin(
         username=username,
