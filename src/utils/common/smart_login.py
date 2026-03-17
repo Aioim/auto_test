@@ -305,3 +305,13 @@ class SmartLogin:
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         self.stop_browser()
         return False  # 不吞异常
+    
+
+def smart_login_decorator(func: Callable[[Page, BrowserContext, Any], Any]) -> Callable[[Any], Any]:
+    """
+    智能登录装饰器，自动处理登录和资源释放
+    """
+    def wrapper(*args, **kwargs):
+        with SmartLogin() as (page, context):
+            return func(page, context, *args, **kwargs)
+    return wrapper
