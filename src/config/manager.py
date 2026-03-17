@@ -249,7 +249,7 @@ class AppConfig(_SettingsBase):
     enable_network_tracing: bool = True
     selector_strategy: str = "lenient"  # strict/lenient
     resource_cleanup_timeout: int = 5
-    login_url: str = ""
+    
     #启动业务时间
     time_now: datetime = datetime.now()
     # 截图输出路径
