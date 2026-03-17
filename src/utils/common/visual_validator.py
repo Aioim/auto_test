@@ -490,7 +490,7 @@ def update_baseline(
 
 if __name__ == "__main__":
     """示例用法"""
-    validator = VisualValidator(test_dir="output\screenshots", baseline_dir="screenshots")
+    validator = VisualValidator()
     
     # 验证单个图像
     result = validator.validate("quick_shot.png")
