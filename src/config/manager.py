@@ -254,6 +254,10 @@ class AppConfig(_SettingsBase):
     time_now: datetime = datetime.now()
     # 截图输出路径
     screenshot_dir: Path = PROJECT_ROOT / "output/screenshots"
+    #视觉验证
+    visual_baseline_dir: Path = PROJECT_ROOT / "test_data/visual/baseline"
+    visual_diff_dir: Path = PROJECT_ROOT / "test_data/visual/baseline"
+    visual_threshold:float = 0.92
     # 添加模型配置
     model_config = ConfigDict(protected_namespaces=())
     
