@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, Tuple, List
 from enum import Enum
 
-from config import settings
+from config import settings, PROJECT_ROOT
 from utils.logger import logger
 
 
@@ -49,10 +49,10 @@ class VisualValidator:
             algorithm: 图像比较算法
         """
         # 从配置读取默认值
-        self.baseline_dir = Path(baseline_dir or getattr(settings, "VISUAL_BASELINE_DIR", "test_data/visual/baseline"))
-        self.test_dir = Path(test_dir or getattr(settings, "VISUAL_TEST_DIR", "screenshots"))
-        self.diff_dir = Path(diff_dir or getattr(settings, "VISUAL_DIFF_DIR", "test_data/visual/diff"))
-        self.threshold = float(getattr(settings, "VISUAL_VALIDATION_THRESHOLD", threshold))
+        self.baseline_dir = Path(baseline_dir or PROJECT_ROOT / settings.visual_baseline_dir)
+        self.test_dir = Path(test_dir or PROJECT_ROOT / settings.screenshot_dir)
+        self.diff_dir = Path(diff_dir or PROJECT_ROOT / settings.visual_diff_dir)
+        self.threshold = float(settings.visual_threshold)
         self.algorithm = algorithm
 
         # 确保目录存在
@@ -212,76 +212,82 @@ class VisualValidator:
             return self._calculate_psnr(img1, img2)
         else:
             return self._calculate_custom(img1, img2)
-
-    def _calculate_mse(self, img1, img2) -> float:
+    @staticmethod
+    def _calculate_mse(img1: np.ndarray, img2: np.ndarray) -> float:
         """
-        计算均方误差 (MSE) 并转换为相似度
-
+        计算基于 MSE 的图像相似度 (0-1)
+        
         Args:
-            img1: 第一个图像
-            img2: 第二个图像
+            img1: 第一个图像 (numpy array)
+            img2: 第二个图像 (numpy array)
 
         Returns:
-            float: 相似度 (0-1)
+            float: 相似度 (0.0 - 1.0)，1.0 表示完全相同
         """
-        mse = np.mean((img1.astype(np.float32) - img2.astype(np.float32)) ** 2)
+        # 1. 形状校验
+        if img1.shape != img2.shape:
+            raise ValueError(f"图像形状不匹配：{img1.shape} vs {img2.shape}")
+        
+        # 2. 确定像素最大值 (动态适配 0-1 或 0-255)
+        # 注意：这里假设两张图的范围一致。通常 uint8 为 255，float 为 1.0
+        data_range = np.max([img1.max(), img2.max()])
+        if data_range <= 1.0:
+            data_range = 1.0
+        # 如果不确定，也可以强制传入 data_range 参数，或者默认按 255 处理并转换类型
+        
+        # 3. 计算 MSE (使用 float64 防止精度损失)
+        mse = np.mean((img1.astype(np.float64) - img2.astype(np.float64)) ** 2)
+        
+        # 4. 处理完全相同的情况
         if mse == 0:
             return 1.0
-        max_pixel = 255.0
-        similarity = 1 - (mse / (max_pixel ** 2))
-        return similarity
+        
+        # 5. 计算相似度并钳制 (Clamp) 到 [0, 1] 范围
+        similarity = 1 - (mse / (data_range ** 2))
+        return float(np.clip(similarity, 0.0, 1.0))
 
-    def _calculate_ssim(self, img1, img2) -> float:
+    @staticmethod
+    def _calculate_ssim(img1: np.ndarray, img2: np.ndarray) -> float:
         """
-        计算结构相似性 (SSIM)
-
-        Args:
-            img1: 第一个图像
-            img2: 第二个图像
-
-        Returns:
-            float: 相似度 (0-1)
+        计算结构相似性 (SSIM) - 使用 scikit-image (推荐)
         """
-        # 转换为灰度图像
-        gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-        gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        if img1.shape != img2.shape:
+            raise ValueError(f"图像形状不匹配：{img1.shape} vs {img2.shape}")
 
-        # 计算均值
-        mu1 = cv2.GaussianBlur(gray1, (11, 11), 1.5)
-        mu2 = cv2.GaussianBlur(gray2, (11, 11), 1.5)
+        # 如果是彩色图像，skimage 的 ssim 默认支持 multichannel，
+        # 但通常转为灰度计算更符合传统 SSIM 定义，或者设置 multichannel=True
+        # 这里为了兼容原逻辑，如果是 3 通道则转为灰度
+        if len(img1.shape) == 3:
+            # 注意：skimage 默认是 RGB，OpenCV 是 BGR，但转灰度结果一样
+            img1 = np.mean(img1, axis=2).astype(np.float32) 
+            img2 = np.mean(img2, axis=2).astype(np.float32)
 
-        # 计算方差和协方差
-        sigma1 = cv2.GaussianBlur(gray1 ** 2, (11, 11), 1.5) - mu1 ** 2
-        sigma2 = cv2.GaussianBlur(gray2 ** 2, (11, 11), 1.5) - mu2 ** 2
-        sigma12 = cv2.GaussianBlur(gray1 * gray2, (11, 11), 1.5) - mu1 * mu2
+        # data_range 自动根据 dtype 判断 (255 for uint8, 1.0 for float)
+        score = ssim(img1, img2, data_range=img1.max() - img1.min())
+        
+        return float(score)
 
-        # 常数
-        C1 = (0.01 * 255) ** 2
-        C2 = (0.03 * 255) ** 2
-
-        # 计算 SSIM
-        ssim_map = ((2 * mu1 * mu2 + C1) * (2 * sigma12 + C2)) / ((mu1 ** 2 + mu2 ** 2 + C1) * (sigma1 + sigma2 + C2))
-        return np.mean(ssim_map)
-
-    def _calculate_psnr(self, img1, img2) -> float:
+    @staticmethod
+    def _calculate_psnr_similarity(img1: np.ndarray, img2: np.ndarray) -> float:
         """
-        计算峰值信噪比 (PSNR) 并转换为相似度
-
-        Args:
-            img1: 第一个图像
-            img2: 第二个图像
-
-        Returns:
-            float: 相似度 (0-1)
+        计算基于 PSNR 的图像相似度 - 使用 scikit-image (推荐)
         """
-        mse = np.mean((img1.astype(np.float32) - img2.astype(np.float32)) ** 2)
-        if mse == 0:
-            return 1.0
-        max_pixel = 255.0
-        psnr = 20 * np.log10(max_pixel / np.sqrt(mse))
-        # 将 PSNR (0-50+) 映射到 (0-1)
-        similarity = min(1.0, psnr / 50)
-        return similarity
+        from skimage.metrics import peak_signal_noise_ratio as psnr
+        if img1.shape != img2.shape:
+            raise ValueError(f"图像形状不匹配：{img1.shape} vs {img2.shape}")
+        
+        # 动态确定数据范围
+        data_range = img1.max() - img1.min()
+        
+        # 计算 PSNR
+        psnr_value = psnr(img1, img2, data_range=data_range)
+        
+        # 将 PSNR 映射到 0-1
+        # 通常 PSNR > 40dB 认为质量极好，< 20dB 认为质量很差
+        # 使用 sigmoid 映射更平滑
+        similarity = 1 / (1 + np.exp(-(psnr_value - 30) / 5))
+        
+        return float(np.clip(similarity, 0.0, 1.0))
 
     def _calculate_custom(self, img1, img2) -> float:
         """
