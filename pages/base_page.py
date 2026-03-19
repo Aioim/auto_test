@@ -1266,3 +1266,315 @@ class BasePage:
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} url={self.current_url()}>"
+
+    # ==================== 网络请求与接口数据 ====================
+
+    def wait_for_response(
+        self, 
+        url: Union[str, Callable[[str], bool]], 
+        timeout: Optional[int] = None,
+        method: Optional[str] = None
+    ) -> Response:
+        """
+        等待指定 URL 的响应
+
+        Args:
+            url: URL 字符串或判断函数
+            timeout: 超时时间（毫秒）
+            method: 可选的 HTTP 方法过滤
+
+        Returns:
+            Response: 响应对象
+
+        Raises:
+            PlaywrightTimeoutError: 响应未出现
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        
+        def response_predicate(response):
+            # 检查 URL
+            if callable(url):
+                if not url(response.url):
+                    return False
+            else:
+                if url not in response.url:
+                    return False
+            
+            # 检查方法
+            if method and response.request.method != method:
+                return False
+            
+            return True
+        
+        logger.info(f"Waiting for response: {url}")
+        response = self.page.wait_for_response(response_predicate, timeout=timeout)
+        logger.info(f"Got response: {response.url} (status: {response.status})")
+        return response
+
+    def get_api_response_data(
+        self, 
+        url: Union[str, Callable[[str], bool]], 
+        timeout: Optional[int] = None,
+        method: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        获取 API 响应数据
+
+        Args:
+            url: URL 字符串或判断函数
+            timeout: 超时时间（毫秒）
+            method: 可选的 HTTP 方法过滤
+
+        Returns:
+            Dict[str, Any]: 响应数据（JSON 解析后）
+
+        Raises:
+            PlaywrightTimeoutError: 响应未出现
+            ValueError: 响应不是有效的 JSON
+        """
+        response = self.wait_for_response(url, timeout, method)
+        try:
+            data = response.json()
+            logger.debug(f"API response data: {data}")
+            return data
+        except Exception as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            raise ValueError(f"Invalid JSON response: {e}")
+
+    def capture_requests(self, urls: List[str]) -> List[Dict[str, Any]]:
+        """
+        捕获指定 URL 的请求数据
+
+        Args:
+            urls: 要捕获的 URL 列表
+
+        Returns:
+            List[Dict[str, Any]]: 捕获的请求数据列表
+
+        Usage:
+            with page.capture_requests(["/api/login", "/api/user"]) as requests:
+                page.click("#login-button")
+            print("Captured requests:", len(requests))
+        """
+        captured_requests = []
+
+        def capture_request(request):
+            for url in urls:
+                if url in request.url:
+                    request_data = {
+                        "url": request.url,
+                        "method": request.method,
+                        "headers": dict(request.headers),
+                        "post_data": request.post_data,
+                        "timestamp": time.time()
+                    }
+                    captured_requests.append(request_data)
+                    logger.debug(f"Captured request: {request.method} {request.url}")
+
+        # 开始监听
+        self.page.on("request", capture_request)
+        
+        try:
+            yield captured_requests
+        finally:
+            # 停止监听
+            self.page.off("request", capture_request)
+
+    # ==================== 下载处理 ====================
+
+    def download_file(
+        self, 
+        selector: SelectorLike,
+        wait_for: str = "visible",
+        timeout: Optional[int] = None,
+        **kwargs
+    ) -> str:
+        """
+        下载文件并返回文件路径
+
+        Args:
+            selector: 触发下载的元素选择器
+            wait_for: 等待状态
+            timeout: 超时时间（毫秒）
+            **kwargs: 传递给 click 的其他参数
+
+        Returns:
+            str: 下载的文件路径
+
+        Raises:
+            PlaywrightTimeoutError: 下载超时
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        
+        # 等待下载完成
+        with self.page.expect_download(timeout=timeout) as download_info:
+            # 点击触发下载的元素
+            self.click(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        
+        download = download_info.value
+        file_path = download.path()
+        logger.info(f"File downloaded: {file_path}")
+        
+        return file_path
+
+    def download_file_to(
+        self, 
+        selector: SelectorLike,
+        target_path: str,
+        wait_for: str = "visible",
+        timeout: Optional[int] = None,
+        **kwargs
+    ) -> str:
+        """
+        下载文件并保存到指定路径
+
+        Args:
+            selector: 触发下载的元素选择器
+            target_path: 目标保存路径
+            wait_for: 等待状态
+            timeout: 超时时间（毫秒）
+            **kwargs: 传递给 click 的其他参数
+
+        Returns:
+            str: 保存的文件路径
+
+        Raises:
+            PlaywrightTimeoutError: 下载超时
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        
+        # 等待下载完成
+        with self.page.expect_download(timeout=timeout) as download_info:
+            # 点击触发下载的元素
+            self.click(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        
+        download = download_info.value
+        save_path = download.save_as(target_path)
+        logger.info(f"File saved to: {save_path}")
+        
+        return save_path
+
+    # ==================== Payload 处理 ====================
+
+    def send_request(
+        self, 
+        method: str, 
+        url: str, 
+        data: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> Response:
+        """
+        发送 HTTP 请求
+
+        Args:
+            method: HTTP 方法（GET, POST, PUT, DELETE 等）
+            url: 请求 URL
+            data: 请求数据
+            headers: 请求头
+            timeout: 超时时间（毫秒）
+
+        Returns:
+            Response: 响应对象
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
+        
+        # 如果是相对路径，拼接 base_url
+        from urllib.parse import urljoin
+        if not url.startswith(("http://", "https://")) and self.base_url:
+            url = urljoin(self.base_url, url)
+        
+        logger.info(f"Sending {method} request to: {url}")
+        logger.debug(f"Request data: {data}")
+        
+        response = self.page.request.request(
+            method=method,
+            url=url,
+            data=data,
+            headers=headers,
+            timeout=timeout
+        )
+        
+        logger.info(f"Request completed with status: {response.status}")
+        return response
+
+    def post_json(
+        self, 
+        url: str, 
+        data: Dict[str, Any],
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        发送 POST 请求并返回 JSON 响应
+
+        Args:
+            url: 请求 URL
+            data: 请求数据
+            headers: 请求头
+            timeout: 超时时间（毫秒）
+
+        Returns:
+            Dict[str, Any]: 响应数据
+        """
+        # 默认 JSON 头
+        default_headers = {"Content-Type": "application/json"}
+        if headers:
+            default_headers.update(headers)
+        
+        response = self.send_request(
+            method="POST",
+            url=url,
+            data=data,
+            headers=default_headers,
+            timeout=timeout
+        )
+        
+        try:
+            return response.json()
+        except Exception as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            raise
+
+    def get_json(
+        self, 
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        发送 GET 请求并返回 JSON 响应
+
+        Args:
+            url: 请求 URL
+            params: 查询参数
+            headers: 请求头
+            timeout: 超时时间（毫秒）
+
+        Returns:
+            Dict[str, Any]: 响应数据
+        """
+        # 构建带参数的 URL
+        from urllib.parse import urljoin, urlencode
+        
+        # 如果是相对路径，拼接 base_url
+        if not url.startswith(("http://", "https://")) and self.base_url:
+            url = urljoin(self.base_url, url)
+        
+        # 添加查询参数
+        if params:
+            url += "?" + urlencode(params)
+        
+        response = self.send_request(
+            method="GET",
+            url=url,
+            headers=headers,
+            timeout=timeout
+        )
+        
+        try:
+            return response.json()
+        except Exception as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            raise
