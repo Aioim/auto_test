@@ -182,6 +182,41 @@ def logged_in_page(smart_login):
     yield page
     # 页面会在 smart_login fixture 中自动关闭
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--env",
+        action="store",
+        default=os.getenv("ENV", "beta"),
+        choices=["alpha", "beta", "prod"],
+        help="指定测试环境：alpha, beta, prod"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    current_env = config.getoption("--env")
+
+    for item in items:
+        # 查找 env 标记
+        env_marker = item.get_closest_marker("env")
+        if env_marker:
+            # 获取标记参数（允许的环境列表）
+            allowed_envs = env_marker.args
+            if not allowed_envs:
+                # 如果标记没有传参数，默认允许所有环境（可根据需求调整）
+                continue
+
+            # 如果允许的环境列表是单个字符串，转为列表方便判断
+            if isinstance(allowed_envs, str):
+                allowed_envs = [allowed_envs]
+            elif len(allowed_envs) == 1 and isinstance(allowed_envs[0], (list, tuple)):
+                # 处理可能嵌套的情况，例如 @pytest.mark.env(['dev', 'prod'])
+                allowed_envs = allowed_envs[0]
+
+            # 检查当前环境是否在允许列表中
+            if current_env not in allowed_envs:
+                reason = f"测试仅允许在环境 {allowed_envs} 中运行，当前环境为 {current_env}"
+                # 跳过该测试
+                item.add_marker(pytest.mark.skip(reason=reason))
 
 # ==================== 安全的YAML加载（带缓存） ====================
 @lru_cache(maxsize=128)
