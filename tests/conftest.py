@@ -1,17 +1,91 @@
 import pytest
 import warnings
 import sys
+import os
+import logging
 from pathlib import Path
 from typing import List, Tuple, Any, Dict, Optional
 from functools import lru_cache
 import re
 from config import PROJECT_ROOT, settings
 from utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Page, Response
 from utils.api_client import APIClient
 from utils.common.smart_login import SmartLogin
 from utils.data.db_helper import DatabaseHelper
 from utils import login_cache
+
+logger = logging.getLogger(__name__)
+
+
+class APIResponseCollector:
+    """
+    API 响应收集器，用于监控和收集非 2xx 状态码的 API 响应
+    """
+    def __init__(self, page: Page, ignore_patterns: List[str] = None):
+        self.page = page
+        self.ignore_patterns = ignore_patterns or []
+        self.non_ok_responses: List[Dict[str, Any]] = []
+        self._setup_listener()
+
+    def _should_ignore(self, url: str) -> bool:
+        """检查是否应该忽略指定的 URL"""
+        return any(pattern in url for pattern in self.ignore_patterns)
+
+    def _setup_listener(self):
+        """设置响应监听器"""
+        def on_response(response: Response):
+            # 只监控 XHR/Fetch
+            if response.request.resource_type not in ("xhr", "fetch"):
+                return
+            status = response.status
+            url = response.url
+            if 200 <= status < 300:
+                return
+            if self._should_ignore(url):
+                return
+            self.non_ok_responses.append({
+                "url": url,
+                "status": status,
+                "status_text": response.status_text,
+                "method": response.request.method,
+            })
+            logger.warning(f"Non-200 API: {response.request.method} {url} -> {status}")
+        self.page.on("response", on_response)
+
+    def get_non_ok_responses(self) -> List[Dict[str, Any]]:
+        """获取非 2xx 响应列表"""
+        return self.non_ok_responses
+
+    def assert_all_ok(self):
+        """断言所有响应都是 2xx 状态码"""
+        if self.non_ok_responses:
+            msg = "\n".join(
+                f"{item['method']} {item['url']} -> {item['status']} {item['status_text']}"
+                for item in self.non_ok_responses
+            )
+            pytest.fail(f"检测到非 2xx API 响应：\n{msg}")
+
+    def ignore_urls(self, *patterns):
+        """添加要忽略的 URL 模式"""
+        self.ignore_patterns.extend(patterns)
+
+
+# ==================== Playwright 相关 Fixtures ====================
+
+@pytest.fixture(scope="function")
+def page_with_monitor(browser):
+    """
+    带 API 响应监控的页面 fixture
+    作用域：function，每个测试函数创建一个新的页面
+    """
+    page = browser.new_page()
+    collector = APIResponseCollector(page)
+    page.api_collector = collector
+    yield page
+    collector.assert_all_ok()
+    page.close()
+
 
 @pytest.fixture(scope="session")
 def playwright():
@@ -59,6 +133,8 @@ def page(context):
     yield page
 
 
+# ==================== API 相关 Fixtures ====================
+
 @pytest.fixture(scope="function")
 def api_client():
     """
@@ -72,33 +148,6 @@ def api_client():
     client = APIClient(base_url=api_base_url)
     yield client
     client.close()
-
-
-@pytest.fixture(scope="function")
-def db():
-    """
-    创建数据库 helper 实例
-    作用域：function，每个测试函数创建一个新的数据库连接
-    """
-    # 检查数据库配置
-    required_db_configs = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]
-    missing_configs = []
-    
-    for config in required_db_configs:
-        if not getattr(settings, config, None):
-            missing_configs.append(config)
-    
-    if missing_configs:
-        pytest.skip(f"缺少数据库配置: {', '.join(missing_configs)}")
-    
-    # 获取数据库类型，默认为 mysql
-    db_type = getattr(settings, "DB_TYPE", "mysql")
-    
-    db_helper = DatabaseHelper()
-    yield db_helper
-    db_helper.close_all()
-
-
 
 
 @pytest.fixture(scope="function")
@@ -132,6 +181,35 @@ def auth_token(api_client, username: str = None):
     
     return token
 
+
+# ==================== 数据库相关 Fixtures ====================
+
+@pytest.fixture(scope="function")
+def db():
+    """
+    创建数据库 helper 实例
+    作用域：function，每个测试函数创建一个新的数据库连接
+    """
+    # 检查数据库配置
+    required_db_configs = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]
+    missing_configs = []
+    
+    for config in required_db_configs:
+        if not getattr(settings, config, None):
+            missing_configs.append(config)
+    
+    if missing_configs:
+        pytest.skip(f"缺少数据库配置: {', '.join(missing_configs)}")
+    
+    # 获取数据库类型，默认为 mysql
+    db_type = getattr(settings, "DB_TYPE", "mysql")
+    
+    db_helper = DatabaseHelper()
+    yield db_helper
+    db_helper.close_all()
+
+
+# ==================== 登录相关 Fixtures ====================
 
 @pytest.fixture(scope="function")
 def smart_login(username: str = None, password: str = None):
@@ -182,7 +260,11 @@ def logged_in_page(smart_login):
     yield page
     # 页面会在 smart_login fixture 中自动关闭
 
+
+# ==================== pytest 配置 ====================
+
 def pytest_addoption(parser):
+    """添加命令行选项"""
     parser.addoption(
         "--env",
         action="store",
@@ -193,6 +275,9 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
+    """
+    根据环境标记过滤测试用例
+    """
     current_env = config.getoption("--env")
 
     for item in items:
@@ -218,7 +303,9 @@ def pytest_collection_modifyitems(config, items):
                 # 跳过该测试
                 item.add_marker(pytest.mark.skip(reason=reason))
 
-# ==================== 安全的YAML加载（带缓存） ====================
+
+# ==================== YAML 数据驱动测试 ====================
+
 @lru_cache(maxsize=128)
 def _cached_load_yaml(file_path_str: str) -> Dict[str, List[Dict[str, Any]]]:
     """
@@ -272,7 +359,6 @@ def _extract_yaml_param_names(metafunc, first_case: Dict[str, Any]) -> List[str]
     return param_names
 
 
-# ==================== 核心钩子（完全修复版） ====================
 def pytest_generate_tests(metafunc):
     """
     pytest 动态参数化钩子
@@ -315,7 +401,7 @@ def pytest_generate_tests(metafunc):
     # === 2. 构建完整文件路径 ===
     # 修复文件路径构建
     abs_file_path = PROJECT_ROOT / "test_data" / file_name
-    print('abs_file_path:', abs_file_path)
+    logger.debug(f"Loading YAML file: {abs_file_path}")
     
     # === 3. 文件存在性预检查 ===
     if not abs_file_path.exists():
@@ -376,7 +462,6 @@ def pytest_generate_tests(metafunc):
     # === 7. 构建参数值与可读性ID ===
     param_values: List[Tuple[Any, ...]] = []
     param_ids: List[str] = []
-
     for idx, case in enumerate(cases):
         if not isinstance(case, dict):
             continue
@@ -424,7 +509,8 @@ def pytest_generate_tests(metafunc):
     )
 
 
-# ==================== 安全的辅助函数 ====================
+# ==================== 辅助函数 ====================
+
 def _raise_usage_error(metafunc, message: str) -> None:
     """
     在收集阶段抛出使用错误
@@ -491,10 +577,3 @@ def _parametrize_empty(metafunc) -> None:
         ids=[],
         scope="function"
     )
-
-
-if __name__=='__main__':
-    # 测试文件路径构建
-    file_name='login_cases.yaml'
-    abs_file_path = PROJECT_ROOT /'test_data'/ file_name
-    print('abs_file_path:', abs_file_path)
