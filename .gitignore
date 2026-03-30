@@ -9,3 +9,7 @@ auto_test_egg-info/
 *_bak/
 logs/
 visual/
+.idea/
+.pytest_cache/
+diff/
+report/
