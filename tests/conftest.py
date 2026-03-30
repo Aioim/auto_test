@@ -14,8 +14,7 @@ from utils.api_client import APIClient
 from utils.common.smart_login import SmartLogin
 from utils.data.db_helper import DatabaseHelper
 from utils import login_cache
-
-logger = logging.getLogger(__name__)
+from utils.logger import logger
 
 
 class APIResponseCollector:
@@ -438,6 +437,9 @@ def pytest_generate_tests(metafunc):
         return
 
     cases = res[group_name]
+    # 确保cases始终是列表格式
+    if isinstance(cases, dict):
+        cases = [cases]
     if not cases:
         _warn_and_skip(
             metafunc,
