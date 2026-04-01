@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict
 import yaml
-from ._path import PROJECT_ROOT
+from config._path import PROJECT_ROOT
 
 
 class YamlLoader:

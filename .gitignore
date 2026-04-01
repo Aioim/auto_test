@@ -4,7 +4,7 @@
 *.log
 .env
 output/
-auto_test_egg-info/
+auto_test.egg-info/
 .trae*
 *_bak/
 logs/
@@ -12,4 +12,4 @@ visual/
 .idea/
 .pytest_cache/
 diff/
-report/
+reports/
