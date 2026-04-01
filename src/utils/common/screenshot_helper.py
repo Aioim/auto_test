@@ -184,7 +184,7 @@ class ScreenshotHelper:
             enable_allure: 是否启用 Allure 集成（自动检测环境）
         """
         self.page = page
-        self.screenshot_dir = screenshot_dir
+        self.screenshot_dir = Path(screenshot_dir)
         self.auto_cleanup = auto_cleanup
         self.max_screenshots = max_screenshots
         self.enable_allure = enable_allure

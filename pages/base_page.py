@@ -18,7 +18,7 @@ from playwright.sync_api import (
 )
 
 from config import settings
-from utils.common.logger import logger
+from utils import logger
 from utils.common.selector_helper import (
     SelectorHelper, Selector, SelectorLike, ResolveInfo, FrameNotFoundError
 )
@@ -425,40 +425,55 @@ class FrameMixin:
 class NetworkMixin:
     """网络请求与下载"""
 
-    def wait_for_response(self, url: Union[str, Callable[[str], bool]],
-                          timeout: Optional[int] = None,
-                          method: Optional[str] = None) -> Response:
-        """等待指定 URL 的响应"""
-        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+    def get_api_response(
+        self,
+        url_matcher: Union[str, re.Pattern, Callable[[str], bool]],
+        trigger_action: Callable[..., Any],
+        *args: Any,
+        timeout: Optional[float] = None,
+        description: str = "unknown action",
+        **kwargs: Any,
+    ) -> Response:
+        """
+        执行触发操作并等待匹配的网络响应。
 
-        def predicate(response):
-            if callable(url):
-                if not url(response.url):
-                    return False
-            else:
-                if url not in response.url:
-                    return False
-            if method and response.request.method != method:
-                return False
-            return True
+        :param url_matcher: URL 匹配器（字符串包含匹配，正则表达式或谓词函数）
+        :param trigger_action: 触发请求的可调用对象（如 self.click）
+        :param args: 传递给 trigger_action 的位置参数
+        :param kwargs: 传递给 trigger_action 的关键字参数
+        :param timeout: 等待响应的超时时间（毫秒），默认使用 self.DEFAULT_TIMEOUT
+        :param description: 操作描述，用于日志
+        :return: 匹配到的 Response 对象
+        :raises PlaywrightTimeoutError: 等待响应超时
+        :raises Exception: 触发动作执行时抛出的任何异常
+        """
+        timeout = timeout or self.DEFAULT_TIMEOUT
 
-        logger.info(f"Waiting for response: {url}")
-        response = self.page.wait_for_response(predicate, timeout=timeout)
-        logger.info(f"Got response: {response.url} (status: {response.status})")
-        return response
+        logger.debug(
+            "[API Wait] Waiting for response matching %s while performing: %s (args=%s, kwargs=%s)",
+            url_matcher, description, args, kwargs
+        )
 
-    def get_api_response_data(self, url: Union[str, Callable[[str], bool]],
-                              timeout: Optional[int] = None,
-                              method: Optional[str] = None) -> Dict[str, Any]:
-        """获取 API 响应数据（JSON）"""
-        response = self.wait_for_response(url, timeout, method)
+        # 注意：expect_response 必须在触发动作之前建立，但必须使用 with 块包裹动作
         try:
-            data = response.json()
-            logger.debug(f"API response data: {data}")
-            return data
+            with self.page.expect_response(url_matcher, timeout=timeout) as response_info:
+                # 执行触发动作（可能抛出异常）
+                trigger_action(*args, **kwargs)
         except Exception as e:
-            logger.error(f"Failed to parse JSON response: {e}")
-            raise ValueError(f"Invalid JSON response: {e}")
+            # 如果触发动作本身抛出异常，记录并重新抛出，保证调用者知道错误
+            logger.error(
+                "[API Wait] Trigger action '%s' failed before response could be captured: %s",
+                description, e, exc_info=True
+            )
+            raise
+
+        # 获取响应对象
+        response = response_info.value
+        logger.debug(
+            "[API Wait] Successfully captured response for %s, status=%s",
+            url_matcher, response.status
+        )
+        return response
 
     @contextmanager
     def capture_requests(self, urls: List[str]) -> Generator[List[Dict[str, Any]], None, None]:
