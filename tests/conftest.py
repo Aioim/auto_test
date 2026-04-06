@@ -15,7 +15,7 @@ from utils.common.smart_login import SmartLogin
 from utils.data.db_helper import DatabaseHelper
 from utils import login_cache
 from utils.logger import logger
-
+from playwright.sync_api import expect
 
 class APIResponseCollector:
     """

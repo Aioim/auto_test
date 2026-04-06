@@ -7,6 +7,8 @@ BasePage - Page Object Pattern 基类（重构版）
 from __future__ import annotations
 
 import time
+import re
+import os
 from contextlib import contextmanager
 from typing import (
     Any, Callable, Dict, Generator, List, Literal, Optional, Tuple, Union
@@ -81,13 +83,18 @@ class ElementActionsMixin:
              wait_for: Literal["visible", "hidden", "attached", "detached"] = "visible",
              timeout: Optional[int] = None,
              retries: Optional[int] = None,
+             initial_delay: float = 0.5,
+             backoff_factor: float = 2.0,
+             max_delay: float = 5.0,
              **kwargs) -> Locator:
-        """查找元素并等待到指定状态"""
+        """查找元素并等待到指定状态，支持重试退避"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         retries = retries if retries is not None else self.DEFAULT_RETRIES
         return SelectorHelper.find(
             self.page, selector, wait_for=wait_for,
-            timeout=timeout, retries=retries, **kwargs
+            timeout=timeout, retries=retries,
+            initial_delay=initial_delay, backoff_factor=backoff_factor,
+            max_delay=max_delay, **kwargs
         )
 
     def exists(self, selector: SelectorLike,
@@ -97,7 +104,7 @@ class ElementActionsMixin:
         """检查元素是否存在（快速检查）"""
         # 若 timeout 为 None，则使用极短超时快速判断
         if timeout is None:
-            timeout = 0
+            timeout = 100  # 毫秒，快速失败
         retries = retries if retries is not None else 1
         return SelectorHelper.exists(
             self.page, selector, timeout=timeout, retries=retries, **kwargs
@@ -454,20 +461,16 @@ class NetworkMixin:
             url_matcher, description, args, kwargs
         )
 
-        # 注意：expect_response 必须在触发动作之前建立，但必须使用 with 块包裹动作
         try:
             with self.page.expect_response(url_matcher, timeout=timeout) as response_info:
-                # 执行触发动作（可能抛出异常）
                 trigger_action(*args, **kwargs)
         except Exception as e:
-            # 如果触发动作本身抛出异常，记录并重新抛出，保证调用者知道错误
             logger.error(
                 "[API Wait] Trigger action '%s' failed before response could be captured: %s",
                 description, e, exc_info=True
             )
             raise
 
-        # 获取响应对象
         response = response_info.value
         logger.debug(
             "[API Wait] Successfully captured response for %s, status=%s",
@@ -553,6 +556,10 @@ class NetworkMixin:
         if headers:
             default_headers.update(headers)
         response = self.send_request("POST", url, data=data, headers=default_headers, timeout=timeout)
+        # 检查状态码
+        if response.status < 200 or response.status >= 300:
+            logger.error(f"POST request failed with status {response.status}: {response.text()}")
+            raise Exception(f"Request failed with status {response.status}")
         try:
             return response.json()
         except Exception as e:
@@ -568,6 +575,9 @@ class NetworkMixin:
         if params:
             url += "?" + urlencode(params)
         response = self.send_request("GET", url, headers=headers, timeout=timeout)
+        if response.status < 200 or response.status >= 300:
+            logger.error(f"GET request failed with status {response.status}: {response.text()}")
+            raise Exception(f"Request failed with status {response.status}")
         try:
             return response.json()
         except Exception as e:
@@ -658,9 +668,9 @@ class ScreenshotMixin:
         """失败时截图（目录从配置读取，默认为 screenshots/）"""
         try:
             screenshot_dir = getattr(settings, "SCREENSHOT_DIR", "screenshots")
-            import os
             os.makedirs(screenshot_dir, exist_ok=True)
-            timestamp = int(time.time())
+            # 使用毫秒级时间戳避免冲突
+            timestamp = int(time.time() * 1000)
             path = os.path.join(screenshot_dir, f"{name}_{timestamp}.png")
             self.screenshot(path=path, full_page=full_page)
             logger.info(f"Screenshot saved: {path}")
@@ -744,19 +754,35 @@ class BasePage(
 
         # 控制台日志（可选监听）
         self._console_logs: List[str] = []
+        self._console_handler = None  # 保存监听器引用，以便移除
 
     # ----- 控制台日志监听（可选）-----
     def start_console_listener(self) -> None:
         """开始监听控制台日志"""
         def handle_console(msg):
             self._console_logs.append(msg.text())
-        self.page.on("console", handle_console)
+        self._console_handler = handle_console
+        self.page.on("console", self._console_handler)
         logger.debug("Console listener started")
+
+    def stop_console_listener(self) -> None:
+        """停止监听控制台日志"""
+        if self._console_handler:
+            self.page.remove_listener("console", self._console_handler)
+            self._console_handler = None
+            logger.debug("Console listener stopped")
 
     def console_logs(self) -> List[str]:
         """获取控制台日志（需先启动监听）"""
         return self._console_logs
-
+    
+    def expect(self, selector: SelectorLike, wait_for: str = "visible",
+                  timeout: Optional[int] = None,*args, **kwargs) -> Expectation:
+        """创建期望对象"""
+        from playwright.sync_api import expect
+        self = self.resolve(selector)
+        kwargs["locator"] = self
+        return expect(*args, **kwargs)
     # ----- 实用工具 -----
     @staticmethod
     def format_selector(selector: Selector, **kwargs) -> Selector:
