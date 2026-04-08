@@ -349,3 +349,4 @@ if __name__ == "__main__":
     print(settings.password)
     print(settings.browser)
     print(settings.to_yaml())
+    print(settings.log)

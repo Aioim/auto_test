@@ -24,8 +24,8 @@ from typing import List, Optional, Dict, Tuple
 from cryptography.fernet import Fernet
 
 from .secrets_manager import SecretsManager, SecurityConfig
-from .env_loader import SecureEnvLoader
-from utils.logger import security_logger, logger
+from .secure_env_loader import SecureEnvLoader
+from logger import security_logger, logger
 
 
 class KeyRotator:
@@ -357,7 +357,7 @@ class KeyRotator:
 
 # ========== 便捷函数 ==========
 
-def rotate_keys(
+def perform_key_rotation(
         backup_dir: Optional[str] = None,
         env_files: Optional[List[str]] = None,
         dry_run: bool = False
@@ -374,7 +374,7 @@ def rotate_keys(
         Dict[str, any]: 轮换报告
 
     Example:
-        >>> report = rotate_keys(
+        >>> report = perform_key_rotation(
         ...     backup_dir="/secure/backups",
         ...     env_files=[".env.production"],
         ...     dry_run=False
@@ -382,3 +382,19 @@ def rotate_keys(
     """
     rotator = KeyRotator()
     return rotator.rotate(backup_dir=backup_dir, env_files=env_files, dry_run=dry_run)
+
+
+# 保留旧名称别名（向后兼容）
+def rotate_keys(
+        backup_dir: Optional[str] = None,
+        env_files: Optional[List[str]] = None,
+        dry_run: bool = False
+) -> Dict[str, any]:
+    """已弃用：使用 perform_key_rotation 替代"""
+    import warnings
+    warnings.warn(
+        "'rotate_keys' is deprecated, use 'perform_key_rotation' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return perform_key_rotation(backup_dir=backup_dir, env_files=env_files, dry_run=dry_run)
