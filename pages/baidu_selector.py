@@ -1,4 +1,4 @@
-from utils.common.selector_helper import Selector
+from core.selector import Selector
 
 search_input = Selector(
     css="#chat-textarea",

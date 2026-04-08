@@ -12,7 +12,66 @@ from utils.api_client import APIClient
 from utils.common.smart_login import SmartLogin
 from utils.data.db_helper import DatabaseHelper
 from utils import login_cache
+import pytest
+from playwright.sync_api import Page, Response
+from typing import List, Dict, Any
+from utils import logger
 
+
+class APIResponseCollector:
+    def __init__(self, page: Page, ignore_patterns: List[str] = None):
+        self.page = page
+        self.ignore_patterns = ignore_patterns or []
+        self.non_ok_responses: List[Dict[str, Any]] = []
+        self._setup_listener()
+
+    def _should_ignore(self, url: str) -> bool:
+        return any(pattern in url for pattern in self.ignore_patterns)
+
+    def _setup_listener(self):
+        def on_response(response: Response):
+            # 只监控 XHR/Fetch
+            if response.request.resource_type not in ("xhr", "fetch"):
+                return
+            status = response.status
+            url = response.url
+            if 200 <= status < 300:
+                return
+            if self._should_ignore(url):
+                return
+            self.non_ok_responses.append({
+                "url": url,
+                "status": status,
+                "status_text": response.status_text,
+                "method": response.request.method,
+            })
+            logger.warning(f"Non-200 API: {response.request.method} {url} -> {status}")
+        self.page.on("response", on_response)
+
+    def get_non_ok_responses(self) -> List[Dict[str, Any]]:
+        return self.non_ok_responses
+
+    def assert_all_ok(self):
+        if self.non_ok_responses:
+            msg = "\n".join(
+                f"{item['method']} {item['url']} -> {item['status']} {item['status_text']}"
+                for item in self.non_ok_responses
+            )
+            pytest.fail(f"检测到非 2xx API 响应：\n{msg}")
+
+    def ignore_urls(self, *patterns):
+        self.ignore_patterns.extend(patterns)
+
+@pytest.fixture(scope="function")
+def page_with_monitor(browser):
+    page = browser.new_page()
+    collector = APIResponseCollector(page)
+    page.api_collector = collector
+    yield page
+    collector.assert_all_ok()
+    page.close()
+    
+    
 @pytest.fixture(scope="session")
 def playwright():
     """

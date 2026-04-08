@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional
 import json
 import yaml
-from config._path import PROJECT_ROOT
+from config.path import PROJECT_ROOT
 
 # 默认本地化映射
 DEFAULT_LOCATORS_I18N = {

@@ -1,47 +1,53 @@
-"""
-环境变量加载器
-负责从系统环境和.env文件加载配置
-"""
+"""环境变量自适应加载器 - 负责检测运行环境并设置默认环境变量"""
 import os
-from typing import Any, Dict
+import platform
+import logging
+from pathlib import Path
+from typing import Optional
 from dotenv import load_dotenv
-from config._path import PROJECT_ROOT
+from config.path import PROJECT_ROOT
+
+logger = logging.getLogger(__name__)
 
 
 class EnvLoader:
-    """环境变量加载器"""
+    """环境变量加载器 - 自动优化 CI/容器/操作系统环境"""
 
-    def __init__(self):
+    def __init__(self, enable_auto_optimize: bool = True):
+        self.enable_auto_optimize = enable_auto_optimize
         self._loaded = False
+        self._detected_ci: Optional[str] = None
+        self._is_container: bool = False
+        self._system_info: dict = {}
 
-    def load(self) -> Dict[str, Any]:
-        """加载环境变量配置"""
-        if not self._loaded:
-            # 1. 从系统环境变量加载
-            self._load_system_env()
+    def load(self) -> None:
+        """加载并优化环境变量（不返回配置字典，只设置 os.environ）"""
+        if self._loaded:
+            return
 
-            # 2. 从.env文件加载 (如果存在)
-            env_path = os.getenv("ENV_FILE", PROJECT_ROOT/'.env')
-            if os.path.exists(env_path):
-                load_dotenv(env_path, override=True)
+        # 1. 从 .env 文件加载（如果存在）
+        env_file = os.getenv("ENV_FILE", str(PROJECT_ROOT / ".env"))
+        if os.path.exists(env_file):
+            load_dotenv(env_file, override=True)
+            logger.debug(f"Loaded .env file from {env_file}")
 
-            self._loaded = True
+        # 2. 自动优化（可禁用）
+        if self.enable_auto_optimize:
+            self._detect_ci_environment()
+            self._detect_container_environment()
+            self._detect_os_and_optimize()
+            self._detect_debug_mode()
+            self._normalize_proxy_settings()
+            self._detect_ca_certificates()
+            self._optimize_by_cpu_cores()
+            self._apply_restricted_mode()
+            self._log_diagnostics_if_debug()
 
-        return self._env_to_config()
+        self._loaded = True
 
-    @staticmethod
-    def _load_system_env():
-        """加载系统环境变量并进行环境自适应优化"""
-        import platform
-
-        # 延迟导入可选依赖
-        psutil = None
-        try:
-            import psutil
-        except ImportError:
-            pass  # psutil 是可选依赖
-
-        # 1. 检测CI/CD环境
+    # ---------- 环境检测与优化方法 ----------
+    def _detect_ci_environment(self) -> None:
+        """检测 CI/CD 环境并设置优化变量"""
         ci_env_vars = {
             "GITHUB_ACTIONS": "github_actions",
             "GITLAB_CI": "gitlab_ci",
@@ -51,267 +57,164 @@ class EnvLoader:
             "BITBUCKET_PIPELINES": "bitbucket",
             "TEAMCITY_VERSION": "teamcity",
             "AZURE_PIPELINES": "azure_pipelines",
-            "CI": "generic_ci"  # 通用CI标记
+            "CI": "generic_ci",
         }
 
-        detected_ci = None
         for var, name in ci_env_vars.items():
             if os.getenv(var):
-                detected_ci = name
+                self._detected_ci = name
                 break
 
-        if detected_ci:
-            # CI环境优化
-            os.environ.setdefault("CI_ENVIRONMENT", detected_ci)
-            os.environ.setdefault("BROWSER_HEADLESS", "true")  # 强制无头模式
-            os.environ.setdefault("VIDEO_RECORDING", "failed")  # 仅录制失败视频
-            os.environ.setdefault("PRESERVE_CONTEXT_ON_FAILURE", "false")  # 避免资源泄漏
-            os.environ.setdefault("ENABLE_NETWORK_TRACING", "false")  # 减少磁盘I/O
+        if self._detected_ci:
+            os.environ.setdefault("CI_ENVIRONMENT", self._detected_ci)
+            os.environ.setdefault("BROWSER_HEADLESS", "true")
+            os.environ.setdefault("VIDEO_RECORDING", "failed")
+            os.environ.setdefault("PRESERVE_CONTEXT_ON_FAILURE", "false")
+            os.environ.setdefault("ENABLE_NETWORK_TRACING", "false")
 
-            # 根据CI类型特殊优化
-            if detected_ci == "github_actions":
-                # GitHub Actions 优化
+            # CI 特定路径优化
+            if self._detected_ci == "github_actions":
                 os.environ.setdefault("ALLURE_RESULTS_DIR", "/github/workspace/reports/allure-results")
-            elif detected_ci == "gitlab_ci":
-                # GitLab CI 优化
+            elif self._detected_ci == "gitlab_ci":
                 os.environ.setdefault("ALLURE_RESULTS_DIR", "${CI_PROJECT_DIR}/reports/allure-results")
                 os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "${CI_PROJECT_DIR}/.cache/ms-playwright")
 
-        # 2. 检测容器环境
-        is_container = False
-
-        # 先检查环境变量（更快）
+    def _detect_container_environment(self) -> None:
+        """检测容器环境并设置优化变量"""
+        # 环境变量检测
         container_vars = ["DOCKER_CONTAINER", "KUBERNETES_SERVICE_HOST", "CONTAINERIZED"]
         if any(os.getenv(var) for var in container_vars):
-            is_container = True
+            self._is_container = True
         else:
-            # 再检查容器标记文件
-            container_markers = [
-                "/.dockerenv",
-                "/run/.containerenv"
-            ]
-
-            # 仅在非Windows系统上检查文件标记
+            # 文件标记检测（仅非 Windows）
             if platform.system().lower() != "windows":
+                container_markers = ["/.dockerenv", "/run/.containerenv"]
                 for marker in container_markers:
                     try:
                         if os.path.exists(marker):
-                            is_container = True
+                            self._is_container = True
                             break
                     except Exception:
-                        pass  # 忽略文件系统访问错误
+                        pass
 
-        if is_container:
+        if self._is_container:
             os.environ.setdefault("CONTAINER_ENVIRONMENT", "true")
-            os.environ.setdefault("BROWSER_HEADLESS", "true")  # 容器必须无头
+            os.environ.setdefault("BROWSER_HEADLESS", "true")
             os.environ.setdefault("ENABLE_JS", "true")
 
-            # 容器资源限制优化
-            if psutil:
-                try:
-                    # 检测容器内存限制
-                    mem_limit = psutil.virtual_memory().total
-                    if mem_limit < 2 * 1024 * 1024 * 1024:  # < 2GB
-                        os.environ.setdefault("RESOURCE_CLEANUP_TIMEOUT", "3")
-                        os.environ.setdefault("MAX_MEMORY_MB", "1500")
-                except Exception:
-                    pass  # 忽略资源检测失败
+            # 内存限制优化
+            try:
+                import psutil
+                mem_limit = psutil.virtual_memory().total
+                if mem_limit < 2 * 1024 * 1024 * 1024:  # < 2GB
+                    os.environ.setdefault("RESOURCE_CLEANUP_TIMEOUT", "3")
+                    os.environ.setdefault("MAX_MEMORY_MB", "1500")
+            except ImportError:
+                pass  # psutil 可选，跳过
 
-        # 3. 检测操作系统和架构
-        system_info = {
-            "platform": platform.system().lower(),
-            "machine": platform.machine().lower(),
+    def _detect_os_and_optimize(self) -> None:
+        """检测操作系统并设置优化变量"""
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+        self._system_info = {
+            "platform": system,
+            "machine": machine,
             "python_version": platform.python_version(),
-            "processor": platform.processor()
+            "processor": platform.processor(),
         }
 
-        # Windows 特定优化
-        if system_info["platform"] == "windows":
-            os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", os.path.join(
+        if system == "windows":
+            default_browsers_path = os.path.join(
                 os.environ.get("LOCALAPPDATA", "C:\\Users\\Default\\AppData\\Local"),
                 "ms-playwright"
-            ))
+            )
+            os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", default_browsers_path)
 
-            # Windows 路径规范化
+            # 规范化 Windows 路径中的斜杠
             for key in ["BASE_URL", "API_BASE_URL"]:
                 if value := os.getenv(key):
                     os.environ[key] = value.replace("\\", "/")
 
-        # macOS 特定优化
-        elif system_info["platform"] == "darwin":
-            os.environ.setdefault("BROWSER_TYPE", "webkit")  # WebKit 在 macOS 上更稳定
+        elif system == "darwin":
+            os.environ.setdefault("BROWSER_TYPE", "webkit")
 
-        # Linux 特定优化
-        elif system_info["platform"] == "linux":
-            # 检测是否为 ARM 架构（树莓派等）
-            if "arm" in system_info["machine"] or "aarch64" in system_info["machine"]:
-                os.environ.setdefault("BROWSER_TYPE", "chromium")  # ARM 上 Firefox 支持有限
+        elif system == "linux":
+            if "arm" in machine or "aarch64" in machine:
+                os.environ.setdefault("BROWSER_TYPE", "chromium")
 
-        # 4. 调试模式检测
+    def _detect_debug_mode(self) -> None:
+        """检测调试模式并设置相关变量"""
         debug_vars = ["DEBUG", "PYTEST_DEBUG", "TEST_DEBUG"]
-        is_debug = any(os.getenv(var, "").lower() in ["true", "1", "yes"] for var in debug_vars)
+        is_debug = any(os.getenv(var, "").lower() in ("true", "1", "yes") for var in debug_vars)
 
         if is_debug:
             os.environ.setdefault("LOG_LEVEL", "debug")
-            os.environ.setdefault("BROWSER_HEADLESS", "false")  # 调试时显示浏览器
-            os.environ.setdefault("VIDEO_RECORDING", "always")  # 始终录制视频
-            os.environ.setdefault("PRESERVE_CONTEXT_ON_FAILURE", "true")  # 保留失败上下文
+            os.environ.setdefault("BROWSER_HEADLESS", "false")
+            os.environ.setdefault("VIDEO_RECORDING", "always")
+            os.environ.setdefault("PRESERVE_CONTEXT_ON_FAILURE", "true")
 
-        # 5. 代理和网络配置
-        # 检测系统代理设置
-        proxy_vars = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]
-        for proxy_var in proxy_vars:
+    def _normalize_proxy_settings(self) -> None:
+        """标准化代理设置"""
+        for proxy_var in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
             if proxy_url := os.getenv(proxy_var):
-                # 标准化代理URL
                 if not proxy_url.startswith(("http://", "https://", "socks://")):
                     proxy_url = f"http://{proxy_url}"
                 os.environ[proxy_var] = proxy_url
-                break
+                break  # 只处理第一个找到的代理
 
-        # 6. 企业环境特定配置
-        # 检测企业CA证书
+    def _detect_ca_certificates(self) -> None:
+        """检测企业 CA 证书"""
         ca_paths = [
             os.getenv("REQUESTS_CA_BUNDLE"),
-            os.getenv("SSL_CERT_FILE")
+            os.getenv("SSL_CERT_FILE"),
         ]
-
-        # 仅在非Windows系统上检查系统CA证书路径
         if platform.system().lower() != "windows":
             ca_paths.extend([
-                "/etc/ssl/certs/ca-certificates.crt",  # Debian/Ubuntu
-                "/etc/pki/tls/certs/ca-bundle.crt",  # RHEL/CentOS
-                "/etc/ssl/certs/ca-certificates.crt"  # Alpine
+                "/etc/ssl/certs/ca-certificates.crt",
+                "/etc/pki/tls/certs/ca-bundle.crt",
             ])
 
         for ca_path in ca_paths:
-            if ca_path:
-                try:
-                    if os.path.exists(ca_path):
-                        os.environ.setdefault("CUSTOM_CA_BUNDLE", ca_path)
-                        break
-                except Exception:
-                    pass  # 忽略文件系统访问错误
+            if ca_path and os.path.exists(ca_path):
+                os.environ.setdefault("CUSTOM_CA_BUNDLE", ca_path)
+                break
 
-        # 7. 性能优化（基于CPU核心数）
-        if psutil:
-            try:
-                cpu_count = psutil.cpu_count(logical=False) or psutil.cpu_count()
-                if cpu_count:
-                    # 设置并行工作进程数建议值
-                    worker_count = min(cpu_count, 4)  # 最多4个worker
-                    os.environ.setdefault("WORKER_COUNT", str(worker_count))
-            except Exception:
-                pass  # 忽略CPU检测失败
+    def _optimize_by_cpu_cores(self) -> None:
+        """根据 CPU 核心数优化并行度"""
+        try:
+            import psutil
+            cpu_count = psutil.cpu_count(logical=False) or psutil.cpu_count()
+            if cpu_count:
+                worker_count = min(cpu_count, 4)
+                os.environ.setdefault("WORKER_COUNT", str(worker_count))
+        except ImportError:
+            pass
 
-        # 8. 安全加固
-        # 检测是否在受限环境
+    def _apply_restricted_mode(self) -> None:
+        """应用受限环境（无网络/离线）优化"""
         restricted_vars = ["NO_INTERNET", "AIRGAPPED", "OFFLINE_MODE"]
-        is_restricted = any(os.getenv(var) for var in restricted_vars)
-
-        if is_restricted:
+        if any(os.getenv(var) for var in restricted_vars):
             os.environ.setdefault("ENABLE_NETWORK_TRACING", "false")
-            os.environ.setdefault("VIDEO_RECORDING", "off")  # 节省磁盘空间
+            os.environ.setdefault("VIDEO_RECORDING", "off")
 
-        # 9. 诊断信息（仅在debug模式）
-        if is_debug or os.getenv("CONFIG_DEBUG", "").lower() in ["true", "1"]:
-            diag_info = {
-                "ci_environment": detected_ci,
-                "container_environment": is_container,
-                "platform": system_info["platform"],
-                "machine": system_info["machine"],
-                "debug_mode": is_debug,
-                "restricted_environment": is_restricted,
-                "psutil_available": psutil is not None
-            }
+    def _log_diagnostics_if_debug(self) -> None:
+        """调试模式下输出诊断信息（使用 logging）"""
+        debug_flag = os.getenv("CONFIG_DEBUG", "").lower() in ("true", "1")
+        if not debug_flag:
+            return
 
-            print("\n" + "=" * 60)
-            print("🔧 环境检测诊断")
-            print("-" * 60)
-            for key, value in diag_info.items():
-                print(f"  {key:25s}: {value}")
-            print("=" * 60 + "\n")
+        diag_info = {
+            "ci_environment": self._detected_ci,
+            "container_environment": self._is_container,
+            "platform": self._system_info.get("platform"),
+            "machine": self._system_info.get("machine"),
+            "debug_mode": bool(os.getenv("DEBUG")),
+            "restricted_environment": bool(os.getenv("AIRGAPPED")),
+        }
+        logger.info("Environment diagnostics:\n" +
+                    "\n".join(f"  {k:20}: {v}" for k, v in diag_info.items()))
 
-    @staticmethod
-    def _env_to_config() -> Dict[str, Any]:
-        """转换环境变量为配置字典"""
-        config = {}
-
-        # 核心配置
-        if env := os.getenv("ENV"):
-            config["env"] = env.lower()
-        if version := os.getenv("FRONTEND_VERSION"):
-            config["frontend_version"] = version
-
-        # URL配置
-        if base_url := os.getenv("BASE_URL"):
-            config["base_url"] = base_url
-        if api_url := os.getenv("API_BASE_URL"):
-            config["api_base_url"] = api_url
-
-        # 凭证 (不验证值，由模型验证)
-        for key in ["ADMIN_USERNAME", "ADMIN_PASSWORD", "API_SECRET_KEY"]:
-            if value := os.getenv(key):
-                # 转换为snake_case
-                config_key = key.lower()
-                config[config_key] = value
-
-        # 浏览器配置
-        browser_config = {}
-        if headless := os.getenv("BROWSER_HEADLESS"):
-            browser_config["headless"] = headless.lower() == "true"
-        if browser_type := os.getenv("BROWSER_TYPE"):
-            browser_config["type"] = browser_type.lower()
-        if width := os.getenv("VIEWPORT_WIDTH"):
-            browser_config.setdefault("viewport", {})["width"] = int(width)
-        if height := os.getenv("VIEWPORT_HEIGHT"):
-            browser_config.setdefault("viewport", {})["height"] = int(height)
-        if browser_config:
-            config["browser"] = browser_config
-
-        # 超时配置
-        timeouts = {}
-        for key in ["PAGE_LOAD_TIMEOUT", "ELEMENT_WAIT_TIMEOUT", "API_TIMEOUT"]:
-            if value := os.getenv(key):
-                timeout_key = key.replace("_TIMEOUT", "").lower()
-                timeouts[timeout_key] = int(value)
-        if timeouts:
-            config["timeouts"] = timeouts
-
-        # Allure配置
-        allure_config = {}
-        if results_dir := os.getenv("ALLURE_RESULTS_DIR"):
-            allure_config["results_dir"] = results_dir
-        if auto_clean := os.getenv("AUTO_CLEAN_RESULTS"):
-            allure_config["auto_clean"] = auto_clean.lower() == "true"
-        if allure_config:
-            config["allure"] = allure_config
-
-        # Playwright目录配置（兼容顶级和嵌套结构）
-        playwright_dirs = {}
-        for key in ["PLAYWRIGHT_VIDEO_DIR", "PLAYWRIGHT_SCREENSHOT_DIR", "PLAYWRIGHT_TRACE_DIR"]:
-            if value := os.getenv(key):
-                # 转换为snake_case并移除前缀
-                clean_key = key.lower().replace("playwright_", "")
-                playwright_dirs[clean_key] = value
-        if playwright_dirs:
-            config["playwright"] = playwright_dirs
-
-        # 高级选项
-        if log_level := os.getenv("LOG_LEVEL"):
-            config["log_level"] = log_level.lower()
-        if preserve := os.getenv("PRESERVE_CONTEXT_ON_FAILURE"):
-            config["preserve_context_on_failure"] = preserve.lower() == "true"
-        if video := os.getenv("VIDEO_RECORDING"):
-            config["video_recording"] = video.lower()
-        if tracing := os.getenv("ENABLE_NETWORK_TRACING"):
-            config["enable_network_tracing"] = tracing.lower() == "true"
-
-        return config
-
-
-# ======================
-# 命令行验证 (自包含)
-# ======================
-if __name__ == '__main__':
-    loader = EnvLoader()
-    print(loader.load())
+if __name__ == "__main__":
+    env_loader = EnvLoader()
+    env_loader.load()
+   

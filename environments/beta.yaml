@@ -1,7 +1,7 @@
 # 开发环境配置
 base_url: "https://dev.example.com"
 api_base_url: "https://api-dev.example.com"
-
+login_url: "https://dev.example.com/login"
 
 timeouts:
   page_load: 45000   # 开发环境更长的超时

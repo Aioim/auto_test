@@ -1,15 +1,9 @@
-from .manager import ConfigManager
-from .locators_i18n import get_text
-from .env_loader import EnvLoader
-from .yaml_loader import YamlLoader
-from ._path import PROJECT_ROOT
-# 全局唯一配置实例
-settings = ConfigManager()
+from config.settings import settings, ConfigManager, AppConfig
+from config.env_loader import EnvLoader
+from config.yaml_loader import YamlLoader
+from config.path import PROJECT_ROOT
+from config.locators_i18n import get_text
 
-__all__ = [
-    "settings",
-    "get_text",
-    "EnvLoader",
-    "YamlLoader",
-    "PROJECT_ROOT"
-]
+__all__ = ["settings", "ConfigManager", "AppConfig", "EnvLoader", "YamlLoader", "PROJECT_ROOT", "get_text"]
+
+

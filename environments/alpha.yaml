@@ -1,6 +1,7 @@
 # 预发布环境配置
 base_url: "https://staging.example.com"
 api_base_url: "https://api-staging.example.com"
+login_url: "https://staging.example.com/login"
 
 
 

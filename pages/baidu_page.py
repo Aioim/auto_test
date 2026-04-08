@@ -2,12 +2,10 @@
 百度搜索页面对象
 """
 from typing import Dict, Any
-
 from base_page import BasePage
 from baidu_selector import search_input, search_results, search_button, search_suggestions, first_result_title, \
     baidu_logo
-
-from utils.logger import logger
+from logger import logger
 
 
 

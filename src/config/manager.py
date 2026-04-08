@@ -6,7 +6,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, Field
 from config.env_loader import EnvLoader
 from config.yaml_loader import YamlLoader
-from config._path import PROJECT_ROOT
+from config.path import PROJECT_ROOT
 from dotenv import load_dotenv
 from datetime import datetime
 

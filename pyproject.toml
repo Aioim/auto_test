@@ -35,7 +35,8 @@ dependencies = [
     # 其他
     "opencv-python", # 额外功能（如 SIFT、SURF 等），可安装扩展包 pip install opencv-contrib-python
     "numpy",
-    "cryptography"
+    "cryptography",
+    "scikit-image"
     
 ]
 

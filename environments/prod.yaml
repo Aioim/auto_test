@@ -1,6 +1,7 @@
 # 生产环境配置 (只读，禁止自动化测试)
 base_url: "https://example.com"
 api_base_url: "https://api.example.com"
+login_url: "https://example.com/login"
 
 
 
