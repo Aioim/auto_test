@@ -47,8 +47,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from playwright.sync_api import sync_playwright
 from config import settings
 from pages.components.login_page import login_page
-from utils.logger import logger
-from utils.cache_utils import (
+from logger import logger
+from auth.cache_utils import (
     load_env_by_name,
     get_all_accounts_from_env,
     save_storage_state,

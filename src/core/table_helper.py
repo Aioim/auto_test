@@ -9,38 +9,27 @@ from logger import logger
 
 class MatchMode(Enum):
     """文本匹配模式"""
-    EXACT = "exact"      # 精确匹配
-    PARTIAL = "partial"  # 部分匹配（contains）
-    REGEX = "regex"      # 正则表达式匹配
+    EXACT = "exact"
+    PARTIAL = "partial"
+    REGEX = "regex"
 
 
 class TableHelper:
     """表格/列表操作工具类（同步）"""
 
-    # 可重试的异常类型
     RETRYABLE_EXCEPTIONS = (PlaywrightTimeoutError, PlaywrightError)
 
     def __init__(self, page: Page, default_row_selector: str = "tr"):
         self.page = page
         self.default_row_selector = default_row_selector
 
-    @staticmethod
     def _apply_text_filter(
+            self,
             locator: Locator,
             text: Union[str, re.Pattern],
             mode: MatchMode
     ) -> Locator:
-        """
-        根据匹配模式对定位器应用文本过滤
-
-        Args:
-            locator: 原始定位器
-            text: 要匹配的文本或正则表达式
-            mode: 匹配模式
-
-        Returns:
-            过滤后的定位器
-        """
+        """根据匹配模式对定位器应用文本过滤"""
         if mode == MatchMode.REGEX:
             if not isinstance(text, re.Pattern):
                 raise TypeError("REGEX 模式下必须提供 re.Pattern 对象")
@@ -50,28 +39,15 @@ class TableHelper:
         else:  # MatchMode.PARTIAL
             return locator.filter(has_text=text)
 
-    @staticmethod
     def _get_action_locator(
+            self,
             row_locator: Locator,
             action_text: str,
             mode: MatchMode
     ) -> Locator:
-        """
-        根据匹配模式获取行内的操作按钮定位器
-
-        Args:
-            row_locator: 行定位器
-            action_text: 按钮文本
-            mode: 匹配模式
-
-        Returns:
-            操作按钮定位器
-        """
+        """根据匹配模式获取行内的操作按钮定位器"""
         if mode == MatchMode.REGEX:
-            # 假设 action_text 已经是正则表达式字符串，需转换为 Pattern
-            # 此处简化处理：直接作为字符串传给 get_by_text，Playwright 会将其视为部分匹配
-            # 若要支持真正的正则，需调用者传入 Pattern，此处为保持接口一致，先忽略复杂正则场景
-            # 生产环境建议扩展为类似 _apply_text_filter 的方式
+            # 简化处理：将字符串编译为正则，假设 action_text 是合法正则表达式
             return row_locator.get_by_text(re.compile(action_text))
         elif mode == MatchMode.EXACT:
             return row_locator.get_by_text(action_text, exact=True)
@@ -84,17 +60,7 @@ class TableHelper:
             row_selector: Optional[str] = None,
             mode: MatchMode = MatchMode.PARTIAL
     ) -> Locator:
-        """
-        根据多条件获取行定位器
-
-        Args:
-            search_conditions: 查询条件字典 {"列名/文本": "值"或正则表达式}
-            row_selector: 行选择器，默认使用初始化时的设置
-            mode: 匹配模式，默认为部分匹配
-
-        Returns:
-            Locator 对象
-        """
+        """根据多条件获取行定位器"""
         if not search_conditions:
             logger.warning("查询条件为空")
             raise ValueError("搜索条件不能为空")
@@ -118,22 +84,7 @@ class TableHelper:
             mode: MatchMode = MatchMode.PARTIAL,
             retry_interval: int = 1000
     ) -> bool:
-        """
-        在列表中根据多条件定位行，并点击行内的操作按钮（带智能重试）
-
-        Args:
-            search_conditions: 查询条件字典
-            action_text: 要点击的按钮文本
-            row_selector: 行选择器
-            timeout: 单次操作超时时间（毫秒）
-            max_retries: 最大重试次数
-            mode: 匹配模式
-            retry_interval: 重试间隔（毫秒）
-
-        Returns:
-            是否成功
-        """
-        # 提前进行参数校验，避免无效重试
+        """在列表中根据多条件定位行，并点击行内的操作按钮（带智能重试）"""
         if not search_conditions:
             raise ValueError("搜索条件不能为空")
 
@@ -148,7 +99,7 @@ class TableHelper:
                 )
                 action_btn = self._get_action_locator(row_locator, action_text, mode)
                 action_btn.wait_for(state="visible", timeout=timeout)
-                action_btn.wait_for(state="enabled", timeout=timeout)
+                # click() 内部已包含元素可交互性（包括启用状态）的等待，无需显式等待 enabled
                 action_btn.click(timeout=timeout)
 
                 logger.info(f"✅ 成功点击：条件={search_conditions}, 操作={action_text}")
@@ -158,11 +109,9 @@ class TableHelper:
                 last_exception = e
                 logger.warning(f"⚠️ 第 {attempt} 次尝试失败（可重试）：{e}")
             except Exception as e:
-                # 不可重试异常直接抛出
                 logger.error(f"❌ 发生不可重试错误：{e}")
                 raise
 
-            # 重试等待
             if attempt < max_retries:
                 self.page.wait_for_timeout(retry_interval)
             else:
@@ -179,19 +128,7 @@ class TableHelper:
             timeout: Optional[float] = 5000,
             mode: MatchMode = MatchMode.EXACT
     ) -> bool:
-        """
-        基于列索引精确/部分/正则匹配（防止不同列有相同文本）
-
-        Args:
-            column_conditions: {列索引：文本或正则}，索引从 1 开始
-            action_text: 要点击的按钮文本
-            row_selector: 行选择器
-            timeout: 超时时间
-            mode: 匹配模式
-
-        Returns:
-            是否成功
-        """
+        """基于列索引精确/部分/正则匹配"""
         if not column_conditions:
             logger.warning("列条件为空")
             raise ValueError("列条件不能为空")
@@ -202,7 +139,6 @@ class TableHelper:
             if col_index < 1:
                 raise ValueError(f"列索引 {col_index} 无效，应为正数")
 
-            # 构建单元格定位器
             cell_locator = self.page.locator(f"td:nth-child({col_index})")
             cell_locator = self._apply_text_filter(cell_locator, text, mode)
             logger.debug(f"添加列条件：第 {col_index} 列 = {text} (模式: {mode.value})")
@@ -210,7 +146,6 @@ class TableHelper:
 
         action_btn = self._get_action_locator(row_locator, action_text, mode)
         action_btn.wait_for(state="visible", timeout=timeout)
-        action_btn.wait_for(state="enabled", timeout=timeout)
         action_btn.click(timeout=timeout)
 
         logger.info(f"✅ 成功点击（列匹配）：条件={column_conditions}, 操作={action_text}")
@@ -224,19 +159,7 @@ class TableHelper:
             mode: MatchMode = MatchMode.PARTIAL,
             max_rows: Optional[int] = None
     ) -> List[List[str]]:
-        """
-        获取所有匹配行的单元格文本数据
-
-        Args:
-            search_conditions: 查询条件
-            row_selector: 行选择器
-            timeout: 超时时间（毫秒）
-            mode: 匹配模式
-            max_rows: 最多返回的行数，None 表示返回全部
-
-        Returns:
-            二维列表，每个子列表代表一行的单元格文本
-        """
+        """获取所有匹配行的单元格文本数据"""
         if not search_conditions:
             logger.warning("查询条件为空")
             raise ValueError("搜索条件不能为空")
@@ -263,18 +186,7 @@ class TableHelper:
             timeout: Optional[float] = 3000,
             mode: MatchMode = MatchMode.PARTIAL
     ) -> bool:
-        """
-        验证行是否存在
-
-        Args:
-            search_conditions: 查询条件
-            row_selector: 行选择器
-            timeout: 超时时间（毫秒）
-            mode: 匹配模式
-
-        Returns:
-            True/False
-        """
+        """验证行是否存在"""
         try:
             if not search_conditions:
                 logger.warning("查询条件为空")
@@ -298,18 +210,7 @@ class TableHelper:
             timeout: Optional[float] = 3000,
             mode: MatchMode = MatchMode.PARTIAL
     ) -> int:
-        """
-        统计匹配的行数
-
-        Args:
-            search_conditions: 查询条件
-            row_selector: 行选择器
-            timeout: 超时时间（毫秒）
-            mode: 匹配模式
-
-        Returns:
-            行数
-        """
+        """统计匹配的行数"""
         try:
             if not search_conditions:
                 logger.warning("查询条件为空")

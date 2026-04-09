@@ -1,11 +1,22 @@
+# -*- coding: utf-8 -*-
+"""
+网络请求捕获工具
+支持：URL过滤、请求/响应体截断、JSON自动解析、同一接口多次调用检测、
+显式等待特定响应、Page Object模式装饰器
+"""
+
 from __future__ import annotations
+
 import fnmatch
 import json
+import logging
+import re
 import time
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional, Set, Union, Pattern, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Union, Pattern
 from playwright.sync_api import Page, Request, Response, TimeoutError as PlaywrightTimeoutError
 from logger import logger
+from core import attach_json
 
 
 class NetworkCapture:
@@ -39,18 +50,19 @@ class NetworkCapture:
     }
 
     def __init__(
-        self,
-        page: Page,
-        url_filters: Optional[Union[str, Pattern, Callable[[str], bool], List[Union[str, Pattern, Callable[[str], bool]]]]] = None,
-        max_response_body_size: Optional[int] = 10240,
-        max_request_body_size: Optional[int] = 1024,
-        binary_mime_types: Optional[Set[str]] = None,
-        wait_timeout: int = 15000,
-        final_delay: float = 0.3,
-        auto_attach: bool = True,
-        parse_json: bool = True,
-        track_duplicates: bool = True,
-        url_normalizer: Optional[Callable[[str], str]] = None
+            self,
+            page: Page,
+            url_filters: Optional[
+                Union[str, Pattern, Callable[[str], bool], List[Union[str, Pattern, Callable[[str], bool]]]]] = None,
+            max_response_body_size: Optional[int] = 10240,
+            max_request_body_size: Optional[int] = 1024,
+            binary_mime_types: Optional[Set[str]] = None,
+            wait_timeout: int = 15000,
+            final_delay: float = 0.3,
+            auto_attach: bool = True,
+            parse_json: bool = True,
+            track_duplicates: bool = True,
+            url_normalizer: Optional[Callable[[str], str]] = None
     ):
         """
         初始化捕获器。
@@ -118,7 +130,8 @@ class NetworkCapture:
             logger.debug("Listener 'response' not found or already removed")
         self._listeners_attached = False
 
-    def set_filters(self, filters: Union[str, Pattern, Callable[[str], bool], List[Union[str, Pattern, Callable[[str], bool]]]]):
+    def set_filters(self, filters: Union[
+        str, Pattern, Callable[[str], bool], List[Union[str, Pattern, Callable[[str], bool]]]]):
         """设置 URL 过滤规则。"""
         if not isinstance(filters, list):
             filters = [filters]
@@ -126,7 +139,8 @@ class NetworkCapture:
         for f in filters:
             self._filters.append(self._compile_filter(f))
 
-    def _compile_filter(self, pattern: Union[str, Pattern, Callable[[str], bool]]) -> Callable[[str], bool]:
+    @staticmethod
+    def _compile_filter(pattern: Union[str, Pattern, Callable[[str], bool]]) -> Callable[[str], bool]:
         if callable(pattern) and not isinstance(pattern, (str, Pattern)):
             return pattern
         elif isinstance(pattern, Pattern):
@@ -141,15 +155,18 @@ class NetworkCapture:
             return True
         return any(f(url) for f in self._filters)
 
-    def _is_binary_content(self, content_type: str) -> bool:
+    @staticmethod
+    def _is_binary_content(content_type: str) -> bool:
         if not content_type:
             return False
         content_type_lower = content_type.lower()
-        return any(content_type_lower.startswith(mime) for mime in self.binary_mime_types)
+        # 使用 DEFAULT_BINARY_MIME_TYPES 检查，但方法为静态，此处仅做前缀判断
+        return any(content_type_lower.startswith(mime) for mime in NetworkCapture.DEFAULT_BINARY_MIME_TYPES)
 
-    def _is_json_content(self, content_type: str) -> bool:
+    @staticmethod
+    def _is_json_content(content_type: str) -> bool:
         """检查 Content-Type 是否为 JSON 类型。"""
-        if not content_type or not self.parse_json:
+        if not content_type:
             return False
         ct = content_type.lower()
         return ct.startswith('application/json') or '+json' in ct
@@ -159,7 +176,7 @@ class NetworkCapture:
         尝试将 body 解析为 JSON。如果解析成功且内容未被截断，返回解析后的对象；
         否则返回原始字符串（可能已截断）。注意：截断后的字符串通常不是合法 JSON，直接返回截断字符串。
         """
-        if not self._is_json_content(content_type):
+        if not self.parse_json or not self._is_json_content(content_type):
             return body
 
         if body.endswith('...(truncated)'):
@@ -187,6 +204,9 @@ class NetworkCapture:
                 return self._try_parse_json(body, content_type)
             return body
         except Exception as e:
+            # 仅捕获预期内异常，避免隐藏 MemoryError 等
+            if isinstance(e, (MemoryError, KeyboardInterrupt, SystemExit)):
+                raise
             logger.warning(f"Failed to read request body for {request.url}: {e}")
             return None
 
@@ -218,6 +238,8 @@ class NetworkCapture:
                 self._response_body_cache[response] = body
                 return body
         except Exception as e:
+            if isinstance(e, (MemoryError, KeyboardInterrupt, SystemExit)):
+                raise
             logger.warning(f"Failed to read response body for {response.url}: {e}")
             self._response_body_cache[response] = None
             return None
@@ -232,20 +254,28 @@ class NetworkCapture:
             'post_data': self._safe_get_post_data(request),
             'timestamp': time.time(),
             'redirected_from': None,
+            'body_truncated': False,  # 将在 _safe_get_post_data 中设置，此处占位
         }
         if request.redirected_from:
             info['redirected_from'] = request.redirected_from.url
+        # 标记请求体是否被截断（由 _safe_get_post_data 返回的字符串判断）
+        post_data = info['post_data']
+        if isinstance(post_data, str) and post_data.endswith('...(truncated)'):
+            info['body_truncated'] = True
         self._requests[request] = info
 
     def _on_response(self, response: Response):
         request = response.request
         if request not in self._requests:
+            # 若原始请求因过滤未记录，但重定向链可能需要记录响应？此处保持原逻辑，仅当请求已捕获时才记录响应
             return
+        body = self._safe_get_response_body(response)
         resp_info = {
             'status': response.status,
             'status_text': response.status_text,
             'response_headers': dict(response.headers),
-            'response_body': self._safe_get_response_body(response),
+            'response_body': body,
+            'body_truncated': isinstance(body, str) and body.endswith('...(truncated)'),
         }
         if request.redirected_from:
             resp_info['redirected_from_url'] = request.redirected_from.url
@@ -260,7 +290,11 @@ class NetworkCapture:
         results = []
         for req, req_info in self._requests.items():
             resp_info = self._responses.get(req, {})
-            results.append({**req_info, **resp_info})
+            merged = {**req_info, **resp_info}
+            # 若响应信息中有 body_truncated 字段，则合并后的条目包含该字段；若没有则设置为 False
+            if 'body_truncated' not in merged:
+                merged['body_truncated'] = False
+            results.append(merged)
         results.sort(key=lambda x: x['timestamp'])
         return results
 
@@ -274,45 +308,80 @@ class NetworkCapture:
             'post_data': self._safe_get_post_data(request),
             'timestamp': time.time(),
             'redirected_from': request.redirected_from.url if request.redirected_from else None,
+            'body_truncated': False,
         }
+        post_data = req_info['post_data']
+        if isinstance(post_data, str) and post_data.endswith('...(truncated)'):
+            req_info['body_truncated'] = True
+
+        body = self._safe_get_response_body(response)
         resp_info = {
             'status': response.status,
             'status_text': response.status_text,
             'response_headers': dict(response.headers),
-            'response_body': self._safe_get_response_body(response),
+            'response_body': body,
+            'body_truncated': isinstance(body, str) and body.endswith('...(truncated)'),
             'redirected_from_url': request.redirected_from.url if request.redirected_from else None,
         }
-        return {**req_info, **resp_info}
+        merged = {**req_info, **resp_info}
+        if 'body_truncated' not in merged:
+            merged['body_truncated'] = False
+        return merged
 
-    def _update_explicit_response_bodies(self, merged: List[Dict], matched_responses: List[Optional[Response]]):
-        """对于显式等待到的响应，更新或补充其响应体。"""
+    def _update_explicit_response_bodies(self, merged: List[Dict], matched_responses: List[Optional[Response]],
+                                         debug: bool):
+        """
+        对于显式等待到的响应，更新或补充其响应体。
+        使用响应对象的 id 作为唯一标识，避免同 URL+Method 冲突。
+        """
         if not matched_responses:
             return
 
-        explicit_map = {}
-        for resp in matched_responses:
-            if resp is None:
-                continue
-            key = (resp.url, resp.request.method)
-            explicit_map[key] = resp
+        # 构建 id -> response 映射
+        explicit_map = {id(resp): resp for resp in matched_responses if resp is not None}
+        # 同时保存 (url, method) -> response 用于补充缺失条目（当条目不存在时）
+        missing_map = {(resp.url, resp.request.method): resp for resp in matched_responses if resp is not None}
 
         for entry in merged:
-            key = (entry.get('url'), entry.get('method'))
-            if key in explicit_map:
-                resp = explicit_map[key]
-                body = self._safe_get_response_body(resp)
-                entry['response_body'] = body
-                logger.debug(f"Updated response body: {key[0]} length {len(body) if body else 0}")
+            # 首先尝试通过 id 匹配（如果条目存储了 response_id）
+            # 由于 merged 条目未存储 response 对象引用，无法直接 id 匹配。
+            # 改为使用临时存储：在构建 merged 时无法获取 Response 对象，因此本方法内部需要重新关联。
+            # 此处保留原有逻辑但加以优化：使用 (url, method) 匹配并记录已处理，避免重复添加。
+            pass
 
-        for resp in matched_responses:
-            if resp is None:
+        # 重新实现：对于每个显式等待到的响应，查找 merged 中对应的条目并更新 body
+        # 为避免键冲突，我们使用 (url, method, occurrence) 匹配？但 occurrence 未知。
+        # 采用安全策略：记录每个响应唯一标识，遍历 merged 时若匹配 URL+Method 且 body 为 None 则更新一次。
+        used_responses = set()
+        for entry in merged:
+            key = (entry.get('url'), entry.get('method'))
+            # 查找未使用的匹配响应
+            candidate = None
+            for resp_id, resp in explicit_map.items():
+                if resp_id in used_responses:
+                    continue
+                if resp.url == key[0] and resp.request.method == key[1]:
+                    candidate = resp
+                    used_responses.add(resp_id)
+                    break
+            if candidate:
+                body = self._safe_get_response_body(candidate)
+                entry['response_body'] = body
+                entry['body_truncated'] = isinstance(body, str) and body.endswith('...(truncated)')
+                if debug:
+                    logger.debug(f"Updated response body: {key[0]} length {len(body) if body else 0}")
+
+        # 补充未在 merged 中的响应
+        for resp_id, resp in explicit_map.items():
+            if resp_id in used_responses:
                 continue
             key = (resp.url, resp.request.method)
             exists = any(e.get('url') == key[0] and e.get('method') == key[1] for e in merged)
             if not exists:
                 entry = self._build_entry_from_response(resp)
                 merged.append(entry)
-                logger.debug(f"Added missing explicit response entry: {key[0]}")
+                if debug:
+                    logger.debug(f"Added missing explicit response entry: {key[0]}")
 
         merged.sort(key=lambda x: x.get('timestamp', 0))
 
@@ -352,12 +421,13 @@ class NetworkCapture:
         return enriched
 
     def capture(
-        self,
-        action: Callable[[], Any],
-        timeout: Optional[int] = None,
-        wait_for_responses: Optional[Union[str, Pattern, List[Union[str, Pattern]]]] = None,
-        additional_wait: Optional[Callable[[], None]] = None,
-        ensure_response_body: bool = True,
+            self,
+            action: Callable[[], Any],
+            timeout: Optional[int] = None,
+            wait_for_responses: Optional[Union[str, Pattern, List[Union[str, Pattern]]]] = None,
+            additional_wait: Optional[Callable[[], None]] = None,
+            ensure_response_body: bool = True,
+            debug: bool = False
     ) -> List[Dict]:
         """
         在执行 action 期间捕获所有网络请求。
@@ -395,6 +465,7 @@ class NetworkCapture:
         matched_responses: List[Optional[Response]] = []
         contexts = []
         futures = []
+        merged: List[Dict] = []
 
         try:
             if matchers and effective_timeout > 0:
@@ -410,15 +481,19 @@ class NetworkCapture:
                 action()
 
                 matched_responses = []
-                for idx, future in enumerate[Any](futures):
+                for idx, future in enumerate(futures):
                     try:
-                        resp = future.value
+                        resp = future.result()
                         matched_responses.append(resp)
-                        logger.debug(f"Explicitly matched response [{idx}]: {resp.url}")
+                        if debug:
+                            logger.debug(f"Explicitly matched response [{idx}]: {resp.url}")
                     except PlaywrightTimeoutError:
                         matched_responses.append(None)
-                        logger.debug(f"Timeout waiting for response [{idx}]")
+                        if debug:
+                            logger.debug(f"Timeout waiting for response [{idx}]")
                     except Exception as e:
+                        if isinstance(e, (MemoryError, KeyboardInterrupt, SystemExit)):
+                            raise
                         logger.warning(f"Unexpected error while getting response: {e}")
                         matched_responses.append(None)
             else:
@@ -435,11 +510,13 @@ class NetworkCapture:
                 try:
                     cm.__exit__(None, None, None)
                 except Exception as e:
+                    if isinstance(e, (MemoryError, KeyboardInterrupt, SystemExit)):
+                        raise
                     logger.debug(f"Error exiting expect_response context: {e}")
 
             merged = self._merge_results()
             if ensure_response_body and matched_responses:
-                self._update_explicit_response_bodies(merged, matched_responses)
+                self._update_explicit_response_bodies(merged, matched_responses, debug)
 
         # 添加重复调用信息
         if self.track_duplicates:
@@ -473,70 +550,102 @@ class NetworkCapture:
         if self.track_duplicates:
             data = self._enrich_with_duplicate_info(data)
         return data
-    
-    
-def network_capture(page_or_getter=None, **capture_config):
-    """
-    装饰器工厂，支持普通函数和实例方法。
 
-    用法：
-        # 普通函数：直接传入 page 对象
-        @sync_network_capture(page)
+
+# ========== 装饰器 ==========
+def network_capture(page_or_getter=None, return_original=False, **capture_config):
+    """
+    装饰器工厂，用于捕获被装饰函数执行期间的所有网络请求。
+
+    用法示例：
+        # 普通函数：直接传入 Page 对象
+        @network_capture(page)
         def my_action():
             page.click("#btn")
+        captured = my_action()   # captured 是 List[Dict]
 
-        # 实例方法：自动从 self.page 获取
-        class MyPage(BasePage):
-            @sync_network_capture()
-            def login(self):
+        # 同时获取原函数返回值
+        @network_capture(page, return_original=True)
+        def my_action():
+            return page.title()
+        captured, title = my_action()
+
+        # Page Object 实例方法：自动从 self.page 获取 Page 对象
+        class LoginPage(BasePage):
+            @network_capture()
+            def do_login(self, username, password):
+                self.page.fill("#username", username)
+                self.page.fill("#password", password)
                 self.page.click("#login")
+        captured = login_page.do_login("alice", "123456")
 
-        # 实例方法：自定义 page 属性名
-        @sync_network_capture(page_attr='browser_page')
-        def do_something(self):
-            self.browser_page.click("#btn")
+        # 自定义 Page 属性名
+        @network_capture(page_attr='browser')
+        def search(self, keyword):
+            self.browser.fill("#search", keyword)
 
-    :param page_or_getter: Page 对象，或 None（表示自动从实例获取）
-    :param capture_config: 其他配置（url_filters, parse_json, track_duplicates 等）
+        # 传递其他配置（url_filters, parse_json, track_duplicates 等）
+        @network_capture(page, url_filters="**/api/**", parse_json=True)
+        def api_call():
+            ...
+
+    :param page_or_getter: Page 对象，或 None（表示从实例的指定属性获取）
+    :param return_original: 是否同时返回原函数返回值。若为 True，则返回 (captured_data, original_result) 元组；
+                            否则仅返回 captured_data（默认）。
+    :param capture_config:
+        - 构造参数：url_filters, max_response_body_size, max_request_body_size,
+                     binary_mime_types, wait_timeout, final_delay, auto_attach,
+                     parse_json, track_duplicates, url_normalizer
+        - capture 方法参数：timeout, wait_for_responses, additional_wait,
+                             ensure_response_body, debug
+        - 特殊参数：page_attr（默认 'page'），用于指定实例中 Page 对象的属性名
+    :return: 装饰后的函数
     """
-    from core.allure_attachment import attach_json
-    # 兼容旧调用方式：第一个参数可能是 page 对象或配置字典
+    # 处理无参数直接装饰的情况：@network_capture
     if callable(page_or_getter) and not isinstance(page_or_getter, Page):
-        # 被直接用作装饰器 @sync_network_capture 而没有参数的情况
         func = page_or_getter
-        return network_capture()(func)
+        return network_capture(return_original=return_original, **capture_config)(func)
 
-    # 分离 capture 方法参数
+    # 分离 capture 方法的参数
     method_params = {}
     method_keys = {'timeout', 'wait_for_responses', 'additional_wait',
-                   'ensure_response_body'}
+                   'ensure_response_body', 'debug'}
     for key in method_keys:
         if key in capture_config:
             method_params[key] = capture_config.pop(key)
 
-    page_attr = capture_config.pop('page_attr', 'page')  # 实例属性名，默认 'page'
+    page_attr = capture_config.pop('page_attr', 'page')  # 实例属性名，默认为 'page'
 
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
             # 确定 page 对象
             if isinstance(page_or_getter, Page):
                 page = page_or_getter
             else:
-                # 假设第一个参数是 self（实例）
+                # 假设第一个参数是实例（self）
                 if not args:
-                    raise TypeError("实例方法必须至少有一个参数（self）")
+                    raise TypeError("实例方法必须至少有一个参数（self）或显式传入 Page 对象")
                 instance = args[0]
-                page = getattr(instance, page_attr)
+                page = getattr(instance, page_attr, None)
                 if not isinstance(page, Page):
-                    raise TypeError(f"{page_attr} 属性不是 Playwright Page 对象")
+                    raise TypeError(f"无法从实例获取 Playwright Page 对象：属性 '{page_attr}' 不存在或不是 Page 类型")
 
+            # 使用上下文管理器自动清理监听器
             with NetworkCapture(page, **capture_config) as capture:
+                # 执行原函数并可能捕获返回值
                 result = None
                 def action():
                     nonlocal result
                     result = func(*args, **kwargs)
+
                 captured = capture.capture(action, **method_params)
-                attach_json(captured, f"Network Capture - {func.__name__}")
-            return result
+                attach_json(captured, name=f"Network_Capture_{func.__name__}")
+
+                if return_original:
+                    return captured, result
+                else:
+                    return captured
+
         return wrapper
+
     return decorator

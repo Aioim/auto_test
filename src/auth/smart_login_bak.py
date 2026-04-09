@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable, Optional, Any, Tuple, List, Dict, Union, TypeVar
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, Playwright, Error as PlaywrightError
 from config import settings, PROJECT_ROOT
-from utils.logger import logger as default_logger
+from logger import logger as default_logger
 
 T = TypeVar('T')
 
