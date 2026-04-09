@@ -14,9 +14,9 @@ from filelock import FileLock
 from config import settings
 
 # 缓存目录（可从 settings 或环境变量获取）
-TOKEN_CACHE_DIR = Path(getattr(settings, "TOKEN_CACHE_DIR", ".token_cache"))
+TOKEN_CACHE_DIR = Path(getattr(settings, "token_cache_dir", ".token_cache"))
 TOKEN_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-TOKEN_MAX_AGE = getattr(settings, "TOKEN_MAX_AGE", 3600)  # 默认 1 小时
+TOKEN_MAX_AGE = getattr(settings, "token_max_age", 3600)  # 默认 1 小时
 
 
 def _get_cache_path(key: str) -> Path:

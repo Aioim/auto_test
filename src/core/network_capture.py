@@ -160,7 +160,6 @@ class NetworkCapture:
         if not content_type:
             return False
         content_type_lower = content_type.lower()
-        # 使用 DEFAULT_BINARY_MIME_TYPES 检查，但方法为静态，此处仅做前缀判断
         return any(content_type_lower.startswith(mime) for mime in NetworkCapture.DEFAULT_BINARY_MIME_TYPES)
 
     @staticmethod
@@ -254,7 +253,7 @@ class NetworkCapture:
             'post_data': self._safe_get_post_data(request),
             'timestamp': time.time(),
             'redirected_from': None,
-            'body_truncated': False,  # 将在 _safe_get_post_data 中设置，此处占位
+            'body_truncated': False,
         }
         if request.redirected_from:
             info['redirected_from'] = request.redirected_from.url
@@ -267,7 +266,6 @@ class NetworkCapture:
     def _on_response(self, response: Response):
         request = response.request
         if request not in self._requests:
-            # 若原始请求因过滤未记录，但重定向链可能需要记录响应？此处保持原逻辑，仅当请求已捕获时才记录响应
             return
         body = self._safe_get_response_body(response)
         resp_info = {
@@ -339,23 +337,10 @@ class NetworkCapture:
 
         # 构建 id -> response 映射
         explicit_map = {id(resp): resp for resp in matched_responses if resp is not None}
-        # 同时保存 (url, method) -> response 用于补充缺失条目（当条目不存在时）
-        missing_map = {(resp.url, resp.request.method): resp for resp in matched_responses if resp is not None}
-
-        for entry in merged:
-            # 首先尝试通过 id 匹配（如果条目存储了 response_id）
-            # 由于 merged 条目未存储 response 对象引用，无法直接 id 匹配。
-            # 改为使用临时存储：在构建 merged 时无法获取 Response 对象，因此本方法内部需要重新关联。
-            # 此处保留原有逻辑但加以优化：使用 (url, method) 匹配并记录已处理，避免重复添加。
-            pass
-
-        # 重新实现：对于每个显式等待到的响应，查找 merged 中对应的条目并更新 body
-        # 为避免键冲突，我们使用 (url, method, occurrence) 匹配？但 occurrence 未知。
-        # 采用安全策略：记录每个响应唯一标识，遍历 merged 时若匹配 URL+Method 且 body 为 None 则更新一次。
         used_responses = set()
+
         for entry in merged:
             key = (entry.get('url'), entry.get('method'))
-            # 查找未使用的匹配响应
             candidate = None
             for resp_id, resp in explicit_map.items():
                 if resp_id in used_responses:
@@ -465,7 +450,6 @@ class NetworkCapture:
         matched_responses: List[Optional[Response]] = []
         contexts = []
         futures = []
-        merged: List[Dict] = []
 
         try:
             if matchers and effective_timeout > 0:
@@ -483,7 +467,7 @@ class NetworkCapture:
                 matched_responses = []
                 for idx, future in enumerate(futures):
                     try:
-                        resp = future.result()
+                        resp = future.value
                         matched_responses.append(resp)
                         if debug:
                             logger.debug(f"Explicitly matched response [{idx}]: {resp.url}")
@@ -517,7 +501,6 @@ class NetworkCapture:
             merged = self._merge_results()
             if ensure_response_body and matched_responses:
                 self._update_explicit_response_bodies(merged, matched_responses, debug)
-
         # 添加重复调用信息
         if self.track_duplicates:
             merged = self._enrich_with_duplicate_info(merged)
@@ -634,6 +617,7 @@ def network_capture(page_or_getter=None, return_original=False, **capture_config
             with NetworkCapture(page, **capture_config) as capture:
                 # 执行原函数并可能捕获返回值
                 result = None
+
                 def action():
                     nonlocal result
                     result = func(*args, **kwargs)

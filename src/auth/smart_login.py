@@ -24,34 +24,39 @@ from .cache_utils import (
     wait_for_login_success,
 )
 
+# 常量定义
+DEFAULT_LOGIN_SUCCESS_TIMEOUT = 3000  # 毫秒
+DEFAULT_VIEWPORT = {"width": 1920, "height": 1080}
+
 
 class SmartLogin:
     """
     智能登录类，自动管理浏览器生命周期和登录状态缓存
+
+    注意：password 参数应为已解密的明文密码。建议调用方在使用后立即清除敏感变量。
     """
 
     def __init__(
-        self,
-        username: str,
-        password: str,
-        login_func: Callable[[Page, str, str], None] = None,
-        env: str = None,
-        config=None,
+            self,
+            username: str,
+            password: str,
+            login_func: Callable[[Page, str, str], None] = None,
+            env: str = None
     ):
         """
         初始化 SmartLogin
 
         Args:
             username: 用户名
-            password: 密码
+            password: 已解密的明文密码（不会长期持有，登录后立即清除）
             login_func: 登录函数，接受 (page, username, password) 参数，
                         默认使用 pages.components.login_page.login_page
             env: 环境标识（如 beta, prod），用于区分缓存文件，默认从 settings.ENV 获取
         """
         self.username = username
-        self.password = password
+        self._password = password  # 临时持有，登录后清除
         self.login_func = login_func or login_page
-        self.env = env or getattr(settings, "ENV", "beta")
+        self.env = env or getattr(settings, "env", "beta")
 
         # 浏览器相关属性
         self.playwright: Optional[Playwright] = None
@@ -60,12 +65,32 @@ class SmartLogin:
         self.page: Optional[Page] = None
         self.is_browser_started = False
 
-        # 浏览器上下文参数（从配置读取）
-        self.context_options = {
-            "viewport": getattr(settings.browser, "viewport", {"width": 1920, "height": 1080}),
-            "permissions": getattr(settings.browser, "permissions", []),
-            "geolocation": getattr(settings.browser, "geolocation", None),
+        # 验证必要配置项
+        self._validate_config()
+
+        # 浏览器上下文参数（从配置安全读取）
+        self.context_options = self._build_context_options()
+
+    def _validate_config(self):
+        """校验配置项完整性，防止运行时属性缺失"""
+        if not hasattr(settings, 'base_url') or not settings.base_url:
+            raise AttributeError("settings.base_url 未配置，无法启动浏览器")
+        # 可以继续添加其他必要配置校验
+
+    def _build_context_options(self) -> Dict[str, Any]:
+        """安全构建浏览器上下文参数，提供合理默认值"""
+        browser_cfg = getattr(settings, 'browser', None) or {}
+        return {
+            "viewport": getattr(browser_cfg, "viewport", DEFAULT_VIEWPORT),
+            "permissions": getattr(browser_cfg, "permissions", []),
+            "geolocation": getattr(browser_cfg, "geolocation", None),
         }
+
+    def _clear_password(self):
+        """清除内存中的密码，降低泄露风险"""
+        if hasattr(self, '_password'):
+            self._password = None
+            delattr(self, '_password')
 
     # ==================== 浏览器生命周期管理 ====================
     def start_browser(self, headless: bool = False):
@@ -149,12 +174,13 @@ class SmartLogin:
                     **self.context_options
                 )
                 self.page = self.context.new_page()
-                logger.info(f"✅ 已加载账号 {self.username} 的登录状态")
+                logger.info(f"✅ 已加载账号 {self.username} 的登录状态（缓存：{cache_path.name}）")
                 return True
             except Exception as e:
                 logger.warning(f"⚠️ 加载缓存时出错: {e}")
                 # 缓存文件可能损坏，删除并重新登录
                 cache_path.unlink(missing_ok=True)
+                logger.info(f"🗑️ 已删除损坏缓存文件：{cache_path}")
                 return False
         else:
             # 缓存无效，备份后删除
@@ -165,19 +191,27 @@ class SmartLogin:
 
     def save_state(self):
         """保存当前登录状态到缓存文件"""
-        if self.context:
+        # 注意：save_storage_state 接受 Page 参数，内部会获取 page.context
+        if self.page:
             save_storage_state(self.page, self.username, self.env)
+            logger.debug(f"💾 已保存登录状态：{self.username}@{self.env}")
+        else:
+            logger.warning("无法保存登录状态：页面对象不存在")
 
     # ==================== 登录流程 ====================
     def login(self):
         """执行实时登录（不依赖缓存）"""
+        if not hasattr(self, '_password') or self._password is None:
+            raise ValueError("密码不可用，请重新初始化 SmartLogin 实例")
         try:
             self.context = self.browser.new_context(**self.context_options)
             self.page = self.context.new_page()
-            self.login_func(self.page, self.username, self.password)
+            self.login_func(self.page, self.username, self._password)
             # 等待登录成功（使用统一的等待机制）
-            wait_for_login_success(self.page)
+            wait_for_login_success(self.page, timeout=DEFAULT_LOGIN_SUCCESS_TIMEOUT)
             logger.info(f"✅ 账号 {self.username} 登录成功")
+            # 登录成功后立即清除密码
+            self._clear_password()
         except Exception as e:
             logger.error(f"❌ 登录失败：{e}")
             raise
@@ -190,14 +224,15 @@ class SmartLogin:
         try:
             self.start_browser()
             if not self.load_state():
+                logger.info(f"🔄 缓存不可用，执行实时登录：{self.username}")
                 self.login()
                 self.save_state()
             else:
                 # 验证缓存恢复后的页面是否仍处于登录状态（可选）
                 self.page.goto(settings.base_url)
-                # 再次确认登录状态（如果超时则视为失效，重新登录）
                 try:
-                    wait_for_login_success(self.page, timeout=3000)
+                    wait_for_login_success(self.page, timeout=DEFAULT_LOGIN_SUCCESS_TIMEOUT)
+                    logger.info("✅ 缓存登录状态验证通过")
                 except Exception:
                     logger.warning("⚠️ 缓存恢复后登录状态失效，重新登录")
                     self._close_context_safely()
@@ -245,7 +280,7 @@ class SmartLogin:
         """
         results = []
         for i, task in enumerate(tasks, 1):
-            logger.info(f"开始执行任务 {i}...")
+            logger.info(f"开始执行任务 {i}/{len(tasks)}...")
             try:
                 res = self.execute_with_login(task)
                 results.append({"task": i, "success": True, "result": res})
@@ -273,7 +308,7 @@ class SmartLogin:
 
 
 # ==================== 装饰器支持 ====================
-def smart_login_decorator(login_func: Callable[[Page, str, str], None] = None, **smart_login_kwargs):
+def smart_login_decorator(_func: Callable = None, **smart_login_kwargs):
     """
     智能登录装饰器，自动处理登录和资源释放
 
@@ -283,40 +318,35 @@ def smart_login_decorator(login_func: Callable[[Page, str, str], None] = None, *
             page.goto("...")
 
     或带参数：
-        @smart_login_decorator(username="admin", password="123")
+        @smart_login_decorator(username="admin", password="123", env="prod")
         def my_test(page, context):
             ...
+
+    注意：密码应为已解密的明文，建议通过环境变量或配置管理。
     """
+
     def decorator(func: Callable[[Page, BrowserContext, Any], Any]) -> Callable[[Any], Any]:
         def wrapper(*args, **kwargs):
-            # 如果装饰器参数中提供了 username/password，则使用；否则从函数参数中获取？
-            # 简化处理：要求 username/password 必须通过装饰器参数或全局配置传入
-            username = smart_login_kwargs.get("username")
-            password = smart_login_kwargs.get("password")
+            # 获取登录凭证：优先使用装饰器参数，其次从 settings 读取
+            username = smart_login_kwargs.get("username") or getattr(settings, "username", None)
+            password = smart_login_kwargs.get("password") or getattr(settings, "password", None)
             env = smart_login_kwargs.get("env")
+
             if not username or not password:
-                # 尝试从 settings 获取
-                username = settings.username
-                password = decrypt_env(settings.password)
-            if not username or not password:
-                raise ValueError("未提供用户名或密码，请通过装饰器参数或 settings.default_user 配置")
-            smart_login = SmartLogin(username, password, login_func, env)
+                raise ValueError("未提供用户名或密码，请通过装饰器参数或配置文件提供")
+
+            smart_login = SmartLogin(username, password, env=env)
             with smart_login as (page, context):
                 return func(page, context, *args, **kwargs)
+
         return wrapper
-    if login_func is not None:
-        # 直接使用 @smart_login_decorator 无参数的情况
-        return decorator(login_func)
+
+    # 处理 @smart_login_decorator 不带括号的情况
+    if _func is not None:
+        return decorator(_func)
     return decorator
 
-def smart_login_decorator_bak(func: Callable[[Page, Any, Any], Any]) -> Callable[[Any], Any]:
-    """
-    智能登录装饰器，自动处理登录和资源释放
-    """
-    def wrapper(*args, **kwargs):
-        with SmartLogin() as page:
-            return func(page, *args, **kwargs)
-    return wrapper
 
 def smart_login(username: str, password: str):
+    """快捷函数：直接执行智能登录并返回 Page 对象"""
     return SmartLogin(username, password).smart_login()

@@ -31,7 +31,7 @@ DEFAULT_BACKOFF_FACTOR = 2.0
 DEFAULT_MAX_DELAY = 5.0  # 秒
 
 # 是否启用 Allure 附加报告（可通过环境变量或配置控制）
-ENABLE_ALLURE_ATTACH = getattr(settings, "ENABLE_SELECTOR_ALLURE", False)
+ENABLE_ALLURE_ATTACH = getattr(settings, "enable_selector_allure", False)
 
 # ============================================================================
 # 类型别名

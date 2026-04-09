@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 
 from config import settings
 from logger import logger
-
+from security import decrypt_env_key
 # ==================== 配置常量（优先从 settings 读取，提供默认值） ====================
 BROWSER_CACHE_DIR = Path(getattr(settings.browser, "cache_dir", ".browser_cache"))
 BROWSER_STATE_CACHE_ENABLED = getattr(settings, "browser_state_cache_enabled", True)
@@ -47,7 +47,7 @@ def get_storage_state_path(username: str, env: str = None) -> Optional[Path]:
     if not BROWSER_STATE_CACHE_ENABLED:
         return None
     BROWSER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    env = env or getattr(settings, "ENV", "beta")
+    env = env or getattr(settings, "env", "beta")
     safe_username = "".join(c for c in username if c.isalnum() or c in "._-")
     filename = f"{safe_username}_{env}.json"
     return BROWSER_CACHE_DIR / filename
@@ -205,18 +205,20 @@ def get_role_credentials(role: str, env: str = None) -> Dict[str, str]:
     Raises:
         ValueError: 未找到对应的环境变量配置
     """
-    env = env or getattr(settings, "ENV", "beta")
+    env = env or getattr(settings, "env", "beta")
     prefix = env.upper()
     user_key = f"{prefix}_{role.upper()}_USER"
     pass_key = f"{prefix}_{role.upper()}_PASS"
     username = os.getenv(user_key)
     password = os.getenv(pass_key)
     if username and password:
+        password = decrypt_env_key(pass_key)
         return {"username": username, "password": password}
     # 回退到单账号变量
     single_user = os.getenv(f"{prefix}_USERNAME")
     single_pass = os.getenv(f"{prefix}_PASSWORD")
     if single_user and single_pass:
+        single_pass = decrypt_env_key(f"{prefix}_PASSWORD")
         return {"username": single_user, "password": single_pass}
     raise ValueError(f"未找到角色 '{role}' 的环境变量配置: {user_key}/{pass_key}")
 
@@ -258,6 +260,7 @@ def get_all_accounts_from_env(env_name: str) -> list:
     single_user = os.getenv(f"{prefix}_USERNAME")
     single_pass = os.getenv(f"{prefix}_PASSWORD")
     if single_user and single_pass:
+        password = decrypt_env_key(f"{prefix}_PASSWORD")
         accounts.append({"username": single_user, "password": single_pass})
     
     # 方式3：特定角色（可在此扩展，例如 admin, manager, employee）

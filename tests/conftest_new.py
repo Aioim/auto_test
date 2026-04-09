@@ -114,7 +114,7 @@ def _get_storage_state_path(username: str) -> Optional[Path]:
         return None
     cache_dir = Path(getattr(settings, "browser_state_cache_dir", ".browser_cache"))
     cache_dir.mkdir(parents=True, exist_ok=True)
-    env = getattr(settings, "ENV", "beta")
+    env = getattr(settings, "env", "beta")
     safe_username = "".join(c for c in username if c.isalnum() or c in "._-")
     filename = f"{safe_username}_{env}.json"
     return cache_dir / filename
