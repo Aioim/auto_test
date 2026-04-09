@@ -31,7 +31,8 @@ class RequestLogger:
         # 动态获取日志实例，避免提前绑定
         self.logger = logger or LazyLogger.get("api")
 
-    def _get_business_caller(self) -> Tuple[str, str, int]:
+    @staticmethod
+    def _get_business_caller() -> Tuple[str, str, int]:
         """
         精准获取业务代码调用位置（跳过框架层）
         优化：使用 inspect.getmodule 判断模块名，避免路径字符串误判

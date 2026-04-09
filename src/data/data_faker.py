@@ -14,7 +14,7 @@ from tqdm.asyncio import tqdm as async_tqdm
 from faker import Faker
 
 from config import settings
-from utils.logger import logger
+from logger import logger
 
 
 # ==================== 生成策略协议 ====================

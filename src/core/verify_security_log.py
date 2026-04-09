@@ -7,7 +7,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from utils.logger import log_security_event
+from logger import log_security_event
 from config import PROJECT_ROOT
 
 def verify_security_log():

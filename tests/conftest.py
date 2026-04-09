@@ -15,7 +15,7 @@ import os
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Generator
 
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
@@ -37,8 +37,8 @@ from data.db_helper import DatabaseHelper
 from data.yaml_cases_loader import InvalidYamlFormatError, load_yaml_file
 from logger import logger
 from pages.components.login_page import login_page
-from security import decrypt_env
-from src.utils.api_client import APIClient
+from security import decrypt_env_key
+from api import APIClient
 
 # ==================== 配置常量 ====================
 TEST_DATA_DIR = Path(getattr(settings, "test_data_dir", PROJECT_ROOT / "test_data/test_cases/"))
@@ -90,7 +90,7 @@ def browser(playwright):
 
 
 @pytest.fixture(scope="function")
-def context(browser: Browser) -> BrowserContext:
+def context(browser: Browser) -> Generator[BrowserContext, Any, None]:
     viewport = getattr(settings.browser, "viewport", {"width": 1920, "height": 1080})
     context = browser.new_context(viewport=viewport)
     yield context
@@ -98,7 +98,7 @@ def context(browser: Browser) -> BrowserContext:
 
 
 @pytest.fixture(scope="function")
-def page(context: BrowserContext) -> Page:
+def page(context: BrowserContext) -> Generator[Page, Any, None]:
     page = context.new_page()
     page.set_default_timeout(settings.timeouts.page_load)
     yield page

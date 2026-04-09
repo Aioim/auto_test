@@ -4,14 +4,8 @@
 提供通用的数据库连接和操作方法，支持MySQL、PostgreSQL、SQLite等常见数据库。
 """
 from __future__ import annotations
-import os
-import json
-import time
-import logging
 from typing import Optional, Dict, Any, List, Tuple, Union
 from contextlib import contextmanager
-
-# 可选依赖，使用try-except处理
 try:
     import pymysql
 except ImportError:
@@ -29,8 +23,7 @@ except ImportError:
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
-
-from utils.logger import logger
+from logger import logger
 from config import settings
 
 

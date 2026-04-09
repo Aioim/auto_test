@@ -4,6 +4,7 @@ import time
 import threading
 from typing import Dict, Any
 
+
 class LogMetrics:
     """SRE监控指标"""
     _lock = threading.Lock()

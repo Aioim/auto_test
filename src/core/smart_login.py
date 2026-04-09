@@ -22,7 +22,6 @@ from .cache_utils import (
     is_storage_state_valid,
     save_storage_state,
     wait_for_login_success,
-    BROWSER_STATE_CACHE_ENABLED,
 )
 
 

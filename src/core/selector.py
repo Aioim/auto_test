@@ -15,7 +15,8 @@ from typing import (
 )
 
 import allure
-from playwright.sync_api import Page, Locator, Frame, FrameLocator, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Page, Locator, Frame, FrameLocator, TimeoutError as PlaywrightTimeoutError, \
+    Error as PlaywrightError
 from config import settings
 from config.locators_i18n import get_text as i18n_get_text
 from logger import logger
@@ -23,11 +24,11 @@ from logger import logger
 # ============================================================================
 # 常量
 # ============================================================================
-DEFAULT_WAIT_TIMEOUT = 5000          # 毫秒
+DEFAULT_WAIT_TIMEOUT = 5000  # 毫秒
 DEFAULT_RETRIES = 3
-DEFAULT_INITIAL_DELAY = 0.5          # 秒
+DEFAULT_INITIAL_DELAY = 0.5  # 秒
 DEFAULT_BACKOFF_FACTOR = 2.0
-DEFAULT_MAX_DELAY = 5.0              # 秒
+DEFAULT_MAX_DELAY = 5.0  # 秒
 
 # 是否启用 Allure 附加报告（可通过环境变量或配置控制）
 ENABLE_ALLURE_ATTACH = getattr(settings, "ENABLE_SELECTOR_ALLURE", False)
@@ -35,7 +36,8 @@ ENABLE_ALLURE_ATTACH = getattr(settings, "ENABLE_SELECTOR_ALLURE", False)
 # ============================================================================
 # 类型别名
 # ============================================================================
-AnyContext = Union[Page, Frame, FrameLocator]   # 可应用定位器的上下文对象
+AnyContext = Union[Page, Frame, FrameLocator]  # 可应用定位器的上下文对象
+
 
 # ============================================================================
 # 自定义异常
@@ -57,6 +59,7 @@ class SelectorResolutionError(SelectorError):
 
 class LocatorWaitTimeoutError(SelectorError):
     """等待元素状态超时"""
+
     def __init__(self, message: str, attempts: List[Dict[str, Any]]):
         super().__init__(message)
         self.attempts = attempts
@@ -68,9 +71,9 @@ class LocatorWaitTimeoutError(SelectorError):
 @dataclass(frozen=True)
 class ResolveInfo:
     """选择器解析元信息"""
-    strategy: str                     # 成功的策略名称
-    ctx: str                          # 上下文描述（如 "page", "frame(name=...)"）
-    attempts: List[Dict[str, Any]]    # 所有尝试的策略列表
+    strategy: str  # 成功的策略名称
+    ctx: str  # 上下文描述（如 "page", "frame(name=...)"）
+    attempts: List[Dict[str, Any]]  # 所有尝试的策略列表
 
 
 # ============================================================================
@@ -86,8 +89,8 @@ class Selector:
     label: Optional[str] = None
     label_key: Optional[str] = None
     placeholder: Optional[str] = None
-    alt: Optional[str] = None          # 新增 alt 文本支持
-    title: Optional[str] = None        # 新增 title 属性支持
+    alt: Optional[str] = None  # 新增 alt 文本支持
+    title: Optional[str] = None  # 新增 title 属性支持
     css: Optional[str] = None
     xpath: Optional[str] = None
     text: Optional[str] = None
@@ -95,7 +98,7 @@ class Selector:
     raw_selector: Optional[str] = None
     description: Optional[str] = None
     deprecated: bool = False
-    exact: bool = False                # 精确匹配（用于 text、role_name）
+    exact: bool = False  # 精确匹配（用于 text、role_name）
 
     # Frame/iframe 支持
     frame_name: Optional[str] = None
@@ -109,6 +112,7 @@ class Selector:
 
     def formatted(self, **kwargs) -> "Selector":
         """替换模板变量，返回新的 Selector 实例"""
+
         def fmt(s: Optional[str]) -> Optional[str]:
             if not s:
                 return s
@@ -264,11 +268,11 @@ def _record_attempts(selector: Union[Selector, str], attempts: List[Tuple[str, A
 
 
 def _try_strategy(
-    ctx: AnyContext,
-    strategy_name: str,
-    builder: Callable[[], Locator],
-    attempts: List[Tuple[str, Any]],
-    value_repr: Any = None
+        ctx: AnyContext,
+        strategy_name: str,
+        builder: Callable[[], Locator],
+        attempts: List[Tuple[str, Any]],
+        value_repr: Any = None
 ) -> Optional[Locator]:
     """
     尝试执行一个定位器构建函数，成功返回 Locator，失败返回 None。
@@ -375,6 +379,7 @@ class SelectorHelper:
                     return ctx.get_by_test_id(selector.test_id)
                 escaped = _escape_css_value(selector.test_id)
                 return ctx.locator(f"[data-testid={escaped}]")
+
             strategies.append((
                 "test_id",
                 True,
@@ -398,6 +403,7 @@ class SelectorHelper:
                     else:
                         return ctx.locator(f"{sel} >> text=*{selector.role_name}*")
                 return ctx.locator(sel)
+
             value_repr = (selector.role, selector.role_name)
             strategies.append((
                 "role",
@@ -412,6 +418,7 @@ class SelectorHelper:
                 if hasattr(ctx, "get_by_label"):
                     return ctx.get_by_label(selector.label)
                 return ctx.locator(f"text={selector.label}")
+
             strategies.append((
                 "label",
                 True,
@@ -426,6 +433,7 @@ class SelectorHelper:
                     return ctx.get_by_placeholder(selector.placeholder)
                 escaped = _escape_css_value(selector.placeholder)
                 return ctx.locator(f"[placeholder={escaped}]")
+
             strategies.append((
                 "placeholder",
                 True,
@@ -440,6 +448,7 @@ class SelectorHelper:
                     return ctx.get_by_alt_text(selector.alt)
                 escaped = _escape_css_value(selector.alt)
                 return ctx.locator(f"[alt={escaped}]")
+
             strategies.append((
                 "alt",
                 True,
@@ -454,6 +463,7 @@ class SelectorHelper:
                     return ctx.get_by_title(selector.title)
                 escaped = _escape_css_value(selector.title)
                 return ctx.locator(f"[title={escaped}]")
+
             strategies.append((
                 "title",
                 True,
@@ -488,6 +498,7 @@ class SelectorHelper:
                     return ctx.locator(f"text={selector.text}")
                 else:
                     return ctx.locator(f"text=*{selector.text}*")
+
             strategies.append((
                 "text",
                 True,
@@ -532,15 +543,15 @@ class SelectorHelper:
     # ------------------------------------------------------------------------
     @staticmethod
     def find(
-        page: Page,
-        selector: SelectorLike,
-        wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = None,
-        timeout: Optional[int] = None,
-        *,
-        retries: int = DEFAULT_RETRIES,
-        initial_delay: float = DEFAULT_INITIAL_DELAY,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-        max_delay: float = DEFAULT_MAX_DELAY
+            page: Page,
+            selector: SelectorLike,
+            wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = None,
+            timeout: Optional[int] = None,
+            *,
+            retries: int = DEFAULT_RETRIES,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            max_delay: float = DEFAULT_MAX_DELAY
     ) -> Locator:
         """
         解析选择器，等待指定状态，支持重试/退避。
@@ -603,14 +614,14 @@ class SelectorHelper:
     # ------------------------------------------------------------------------
     @staticmethod
     def exists(
-        page: Page,
-        selector: SelectorLike,
-        *,
-        timeout: Optional[int] = None,
-        retries: int = 1,
-        initial_delay: float = DEFAULT_INITIAL_DELAY,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-        max_delay: float = DEFAULT_MAX_DELAY
+            page: Page,
+            selector: SelectorLike,
+            *,
+            timeout: Optional[int] = None,
+            retries: int = 1,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            max_delay: float = DEFAULT_MAX_DELAY
     ) -> bool:
         """检查元素是否存在（附加到 DOM）"""
         try:
@@ -625,15 +636,15 @@ class SelectorHelper:
 
     @staticmethod
     def click(
-        page: Page,
-        selector: SelectorLike,
-        *,
-        wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = "visible",
-        timeout: Optional[int] = None,
-        retries: int = DEFAULT_RETRIES,
-        initial_delay: float = DEFAULT_INITIAL_DELAY,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-        max_delay: float = DEFAULT_MAX_DELAY
+            page: Page,
+            selector: SelectorLike,
+            *,
+            wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = "visible",
+            timeout: Optional[int] = None,
+            retries: int = DEFAULT_RETRIES,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            max_delay: float = DEFAULT_MAX_DELAY
     ) -> None:
         loc = SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,
@@ -644,16 +655,16 @@ class SelectorHelper:
 
     @staticmethod
     def fill(
-        page: Page,
-        selector: SelectorLike,
-        value: str,
-        *,
-        wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = "visible",
-        timeout: Optional[int] = None,
-        retries: int = DEFAULT_RETRIES,
-        initial_delay: float = DEFAULT_INITIAL_DELAY,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-        max_delay: float = DEFAULT_MAX_DELAY
+            page: Page,
+            selector: SelectorLike,
+            value: str,
+            *,
+            wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = "visible",
+            timeout: Optional[int] = None,
+            retries: int = DEFAULT_RETRIES,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            max_delay: float = DEFAULT_MAX_DELAY
     ) -> None:
         loc = SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,
@@ -664,15 +675,15 @@ class SelectorHelper:
 
     @staticmethod
     def get_text(
-        page: Page,
-        selector: SelectorLike,
-        *,
-        wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = "visible",
-        timeout: Optional[int] = None,
-        retries: int = DEFAULT_RETRIES,
-        initial_delay: float = DEFAULT_INITIAL_DELAY,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-        max_delay: float = DEFAULT_MAX_DELAY
+            page: Page,
+            selector: SelectorLike,
+            *,
+            wait_for: Optional[Literal["attached", "detached", "hidden", "visible"]] = "visible",
+            timeout: Optional[int] = None,
+            retries: int = DEFAULT_RETRIES,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            max_delay: float = DEFAULT_MAX_DELAY
     ) -> Optional[str]:
         loc = SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,
@@ -683,14 +694,14 @@ class SelectorHelper:
 
     @staticmethod
     def is_visible(
-        page: Page,
-        selector: SelectorLike,
-        *,
-        timeout: Optional[int] = None,
-        retries: int = 1,
-        initial_delay: float = DEFAULT_INITIAL_DELAY,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-        max_delay: float = DEFAULT_MAX_DELAY
+            page: Page,
+            selector: SelectorLike,
+            *,
+            timeout: Optional[int] = None,
+            retries: int = 1,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            max_delay: float = DEFAULT_MAX_DELAY
     ) -> bool:
         try:
             SelectorHelper.find(
@@ -704,15 +715,15 @@ class SelectorHelper:
 
     @staticmethod
     def wait_for(
-        page: Page,
-        selector: SelectorLike,
-        wait_for: Literal["attached", "detached", "hidden", "visible"] = "visible",
-        *,
-        timeout: Optional[int] = None,
-        retries: int = DEFAULT_RETRIES,
-        initial_delay: float = DEFAULT_INITIAL_DELAY,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-        max_delay: float = DEFAULT_MAX_DELAY
+            page: Page,
+            selector: SelectorLike,
+            wait_for: Literal["attached", "detached", "hidden", "visible"] = "visible",
+            *,
+            timeout: Optional[int] = None,
+            retries: int = DEFAULT_RETRIES,
+            initial_delay: float = DEFAULT_INITIAL_DELAY,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+            max_delay: float = DEFAULT_MAX_DELAY
     ) -> Locator:
         return SelectorHelper.find(
             page, selector, wait_for=wait_for, timeout=timeout,

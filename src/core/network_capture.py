@@ -499,7 +499,7 @@ def network_capture(page_or_getter=None, **capture_config):
     :param page_or_getter: Page 对象，或 None（表示自动从实例获取）
     :param capture_config: 其他配置（url_filters, parse_json, track_duplicates 等）
     """
-    from utils.common.allure_attachment import attach_json
+    from core.allure_attachment import attach_json
     # 兼容旧调用方式：第一个参数可能是 page 对象或配置字典
     if callable(page_or_getter) and not isinstance(page_or_getter, Page):
         # 被直接用作装饰器 @sync_network_capture 而没有参数的情况
