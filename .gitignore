@@ -13,3 +13,4 @@ visual/
 .pytest_cache/
 diff/
 reports/
+.idea/
