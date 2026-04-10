@@ -1,13 +1,14 @@
-# Common 模块文档
+# Core 模块文档
 
 ## 模块概述
 
-Common 模块是一个功能强大的通用工具集合，为自动化测试提供了多种实用功能：
+Core 模块是一个功能强大的通用工具集合，为自动化测试提供了多种实用功能：
 
-- **截图辅助**：提供丰富的截图功能，支持页面截图、元素截图、高亮标注等
+- **网络捕获**：提供网络请求和响应的捕获功能
+- **截图辅助**：提供丰富的截图功能，支持页面截图、元素截图等
 - **选择器辅助**：提供智能元素定位和操作功能，支持多种定位策略
 - **视觉验证**：提供图像比较和视觉回归测试功能
-- **日志监控**：提供实时日志监控和密码泄露检测功能
+- **Allure 附件**：提供将各种类型的附件添加到 Allure 报告的功能
 
 ## 安装依赖
 
@@ -21,15 +22,27 @@ pip install tqdm
 
 ## 核心功能
 
-### 1. 截图辅助 (`ScreenshotHelper`)
+### 1. 网络捕获 (`network_capture`)
 
 **功能**：
-- **多种截图类型**：完整页面、可视区域、单个元素、高亮元素等
-- **元素高亮**：支持高亮单个元素或多个元素
-- **标注功能**：支持文本标注、箭头标注和矩形标注
-- **截图管理**：自动清理旧截图，导出截图历史
+- **请求捕获**：捕获浏览器的网络请求和响应
+- **过滤功能**：支持按 URL、方法、状态码等过滤请求
+- **响应分析**：解析和分析 HTTP 响应
+- **性能分析**：记录请求时间和响应时间
+
+**使用场景**：
+- 调试 API 调用
+- 验证网络请求参数
+- 分析页面加载性能
+- 监控第三方服务调用
+
+### 2. 截图辅助 (`ScreenshotHelper`)
+
+**功能**：
+- **多种截图类型**：完整页面、可视区域、单个元素等
+- **元素高亮**：支持高亮显示元素
+- **截图管理**：自动清理旧截图
 - **Allure 集成**：自动将截图附加到 Allure 报告
-- **安全路径处理**：防止路径穿越攻击
 
 **主要方法**：
 - `take_screenshot()`：截取屏幕截图
@@ -37,20 +50,15 @@ pip install tqdm
 - `take_full_page_screenshot()`：截取完整页面截图
 - `take_viewport_screenshot()`：截取可视区域截图
 - `highlight_element()`：高亮显示元素
-- `highlight_and_capture()`：高亮元素并截图
-- `annotate_screenshot()`：截取带标注的截图
 - `cleanup_screenshots()`：清理截图文件
 
-### 2. 选择器辅助 (`SelectorHelper`)
+### 3. 选择器辅助 (`SelectorHelper`)
 
 **功能**：
-- **多种定位策略**：CSS、XPath、文本、角色、测试 ID 等
+- **多种定位策略**：CSS、XPath、文本等
 - **智能解析**：自动尝试多种定位策略，提高定位成功率
-- **iframe 支持**：支持在 iframe 中定位元素
-- **阴影 DOM 支持**：支持在阴影 DOM 中定位元素
 - **重试机制**：支持带退避策略的重试
 - **Allure 集成**：自动记录定位尝试和结果
-- **国际化支持**：支持基于语言环境的本地化定位
 
 **主要方法**：
 - `resolve_locator()`：解析选择器为 Locator 对象
@@ -62,7 +70,7 @@ pip install tqdm
 - `is_visible()`：检查元素是否可见
 - `wait_for()`：等待元素达到指定状态
 
-### 3. 视觉验证 (`VisualValidator`)
+### 4. 视觉验证 (`VisualValidator`)
 
 **功能**：
 - **多种比较算法**：均方误差 (MSE)、结构相似性 (SSIM)、峰值信噪比 (PSNR)
@@ -78,28 +86,60 @@ pip install tqdm
 - `get_baseline_images()`：获取所有基准图像
 - `get_test_images()`：获取所有测试图像
 
-### 4. 日志监控 (`RealtimeLogMonitor`)
+### 5. Allure 附件 (`allure_attachment`)
 
 **功能**：
-- **实时监控**：实时扫描日志文件
-- **密码泄露检测**：检测日志中的密码、令牌、API 密钥等敏感信息
-- **紧急告警**：发现泄露时立即发出告警
-- **应急记录**：将泄露信息写入应急文件
-- **安全模式**：忽略已脱敏的敏感信息
+- **多种附件类型**：支持 JSON、文件、图像、文本、XML 等
+- **自动集成**：自动将附件添加到 Allure 报告
+- **便捷方法**：提供简洁的方法添加各种类型的附件
 
 **主要方法**：
-- `start()`：启动监控线程
-- `stop()`：停止监控
+- `attach_json()`：添加 JSON 附件
+- `attach_file()`：添加文件附件
+- `attach_image()`：添加图像附件
+- `attach_jpg()`：添加 JPG 图像附件
+- `attach_png()`：添加 PNG 图像附件
+- `attach_text()`：添加文本附件
+- `attach_xml()`：添加 XML 附件
 
 ## 使用示例
 
-### 1. 截图辅助示例
-
-#### 基础用法
+### 1. 网络捕获示例
 
 ```python
 from playwright.sync_api import sync_playwright
-from utils.common import ScreenshotHelper
+from utils.core import network_capture
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    
+    # 开始捕获网络请求
+    with network_capture(page) as capture:
+        page.goto("https://example.com")
+        
+        # 获取所有请求
+        requests = capture.get_requests()
+        print(f"捕获到 {len(requests)} 个请求")
+        
+        # 过滤请求
+        api_requests = capture.get_requests(filter_by={"url": "/api"})
+        print(f"API 请求: {len(api_requests)}")
+        
+        # 获取响应
+        for req in api_requests:
+            response = capture.get_response(req)
+            if response:
+                print(f"URL: {req.url}, 状态码: {response.status}")
+    
+    browser.close()
+```
+
+### 2. 截图辅助示例
+
+```python
+from playwright.sync_api import sync_playwright
+from utils.core import ScreenshotHelper
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
@@ -122,79 +162,28 @@ with sync_playwright() as p:
         highlight=True
     )
     
-    # 高亮元素并截图
-    helper.highlight_and_capture(
-        selector="p",
-        name="paragraph",
-        color="blue"
-    )
+    # 高亮元素
+    helper.highlight_element(selector="p")
+    
+    # 清理截图
+    helper.cleanup_screenshots(keep_latest=10)
     
     browser.close()
 ```
 
-#### 带标注的截图
-
-```python
-# 截取带标注的截图
-annotations = [
-    {
-        "type": "text",
-        "text": "Important element",
-        "x": 100,
-        "y": 100,
-        "color": "red",
-        "font_size": 16
-    },
-    {
-        "type": "arrow",
-        "x1": 150,
-        "y1": 150,
-        "x2": 200,
-        "y2": 200,
-        "color": "green",
-        "thickness": 2
-    },
-    {
-        "type": "rectangle",
-        "x": 250,
-        "y": 250,
-        "width": 100,
-        "height": 50,
-        "color": "blue",
-        "thickness": 2,
-        "opacity": 0.3
-    }
-]
-
-helper.annotate_screenshot(
-    name="annotated_screenshot",
-    annotations=annotations
-)
-```
-
-### 2. 选择器辅助示例
-
-#### 基础用法
+### 3. 选择器辅助示例
 
 ```python
 from playwright.sync_api import sync_playwright
-from utils.common import SelectorHelper, Selector
+from utils.core import SelectorHelper
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page()
     page.goto("https://example.com")
     
-    # 使用字符串选择器
+    # 解析选择器
     locator = SelectorHelper.resolve_locator(page, "h1")
-    print(locator.text_content())
-    
-    # 使用结构化选择器
-    selector = Selector(
-        css="p",
-        description="Paragraph element"
-    )
-    locator = SelectorHelper.resolve_locator(page, selector)
     print(locator.text_content())
     
     # 查找元素并等待可见
@@ -210,33 +199,17 @@ with sync_playwright() as p:
     exists = SelectorHelper.exists(page, "div.result")
     print(f"Result exists: {exists}")
     
+    # 检查元素是否可见
+    visible = SelectorHelper.is_visible(page, "div.result")
+    print(f"Result visible: {visible}")
+    
     browser.close()
 ```
 
-#### 使用 iframe 和阴影 DOM
+### 4. 视觉验证示例
 
 ```python
-# 在 iframe 中定位元素
-iframe_selector = Selector(
-    css="button",
-    frame_name="iframe-name"
-)
-SelectorHelper.click(page, iframe_selector)
-
-# 在阴影 DOM 中定位元素
-shadow_selector = Selector(
-    css="input",
-    shadow_path=["#shadow-host", ".shadow-content"]
-)
-SelectorHelper.fill(page, shadow_selector, "test")
-```
-
-### 3. 视觉验证示例
-
-#### 基础用法
-
-```python
-from utils.common import VisualValidator
+from utils.core import VisualValidator
 
 # 创建视觉验证实例
 validator = VisualValidator(
@@ -253,52 +226,60 @@ print(f"验证结果: {'通过' if result['success'] else '失败'}")
 print(f"相似度: {result['similarity']:.4f}")
 
 # 验证整个目录
- directory_result = validator.validate_directory()
+directory_result = validator.validate_directory()
 print(f"目录验证结果: 总计 {directory_result['total']}, 通过 {directory_result['passed']}, 失败 {directory_result['failed']}")
 
 # 更新基准图像
 validator.update_baseline("new_homepage.png")
 ```
 
-### 4. 日志监控示例
-
-#### 基础用法
+### 5. Allure 附件示例
 
 ```python
-from pathlib import Path
-from utils.common import RealtimeLogMonitor
+from utils.core import attach_json, attach_file, attach_image, attach_text
+import json
 
-# 创建日志监控实例
-monitor = RealtimeLogMonitor(
-    log_dir=Path("logs"),
-    check_interval=1.0
-)
+# 添加 JSON 附件
+data = {"name": "test", "value": 123}
+attach_json(data, name="test_data")
 
-# 启动监控
-monitor.start()
+# 添加文件附件
+attach_file("path/to/file.txt", name="log_file")
 
-# 运行一段时间后停止
-import time
-time.sleep(60)  # 监控 60 秒
-monitor.stop()
-```
+# 添加图像附件
+attach_image("path/to/image.png", name="screenshot")
 
-#### 命令行运行
-
-```bash
-# 监控默认日志目录
-python log_monitor.py
-
-# 监控指定日志目录
-python log_monitor.py --log-dir /var/log/myapp
-
-# 自定义检查间隔
-python log_monitor.py --log-dir /var/log/myapp --interval 2.0
+# 添加文本附件
+attach_text("Test message", name="test_message")
 ```
 
 ## API 参考
 
-### 1. ScreenshotHelper
+### 1. 网络捕获 (`network_capture`)
+
+#### 用法
+
+```python
+with network_capture(page) as capture:
+    # 执行操作
+    page.goto("https://example.com")
+    # 获取请求和响应
+    requests = capture.get_requests()
+    response = capture.get_response(requests[0])
+```
+
+#### 主要方法
+
+- `get_requests(filter_by: Optional[Dict[str, Any]] = None) -> List[Request]`
+  - 获取捕获的请求，可选择性过滤
+
+- `get_response(request: Request) -> Optional[Response]`
+  - 获取请求对应的响应
+
+- `get_responses(filter_by: Optional[Dict[str, Any]] = None) -> List[Response]`
+  - 获取捕获的响应，可选择性过滤
+
+### 2. ScreenshotHelper
 
 #### 初始化
 
@@ -316,28 +297,52 @@ def __init__(
 #### 主要方法
 
 - `take_screenshot(name=None, screenshot_type=ScreenshotType.VIEWPORT, selector=None, format=DEFAULT_FORMAT, quality=None, timeout=None, **kwargs) -> ScreenshotMetadata`
-- `take_element_screenshot(selector, name=None, highlight=False, **kwargs) -> ScreenshotMetadata`
-- `take_full_page_screenshot(name=None, **kwargs) -> ScreenshotMetadata`
-- `take_viewport_screenshot(name=None, **kwargs) -> ScreenshotMetadata`
-- `highlight_element(selector, color="red", thickness=3, style="solid", timeout=None) -> bool`
-- `highlight_and_capture(selector, name=None, color="red", thickness=3, style="solid", duration=0.3, **kwargs) -> ScreenshotMetadata`
-- `annotate_screenshot(name=None, annotations=None, **kwargs) -> ScreenshotMetadata`
-- `cleanup_screenshots(keep_latest=None, older_than=None, pattern=None) -> int`
+  - 截取屏幕截图
 
-### 2. SelectorHelper
+- `take_element_screenshot(selector, name=None, highlight=False, **kwargs) -> ScreenshotMetadata`
+  - 截取元素截图
+
+- `take_full_page_screenshot(name=None, **kwargs) -> ScreenshotMetadata`
+  - 截取完整页面截图
+
+- `take_viewport_screenshot(name=None, **kwargs) -> ScreenshotMetadata`
+  - 截取可视区域截图
+
+- `highlight_element(selector, color="red", thickness=3, style="solid", timeout=None) -> bool`
+  - 高亮显示元素
+
+- `cleanup_screenshots(keep_latest=None, older_than=None, pattern=None) -> int`
+  - 清理截图文件
+
+### 3. SelectorHelper
 
 #### 主要方法
 
 - `resolve_locator(page: Page, selector: SelectorLike) -> Locator`
-- `find(page: Page, selector: SelectorLike, wait_for=None, timeout=None, *, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> Locator`
-- `exists(page: Page, selector: SelectorLike, *, timeout=None, retries=1, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> bool`
-- `click(page: Page, selector: SelectorLike, *, wait_for="visible", timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> None`
-- `fill(page: Page, selector: SelectorLike, value: str, *, wait_for="visible", timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> None`
-- `get_text(page: Page, selector: SelectorLike, *, wait_for="visible", timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> Optional[str]`
-- `is_visible(page: Page, selector: SelectorLike, *, timeout=None, retries=1, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> bool`
-- `wait_for(page: Page, selector: SelectorLike, wait_for="visible", *, timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> Locator`
+  - 解析选择器为 Locator 对象
 
-### 3. VisualValidator
+- `find(page: Page, selector: SelectorLike, wait_for=None, timeout=None, *, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> Locator`
+  - 解析并等待元素达到指定状态
+
+- `exists(page: Page, selector: SelectorLike, *, timeout=None, retries=1, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> bool`
+  - 检查元素是否存在
+
+- `click(page: Page, selector: SelectorLike, *, wait_for="visible", timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> None`
+  - 点击元素
+
+- `fill(page: Page, selector: SelectorLike, value: str, *, wait_for="visible", timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> None`
+  - 填充输入框
+
+- `get_text(page: Page, selector: SelectorLike, *, wait_for="visible", timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> Optional[str]`
+  - 获取元素文本
+
+- `is_visible(page: Page, selector: SelectorLike, *, timeout=None, retries=1, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> bool`
+  - 检查元素是否可见
+
+- `wait_for(page: Page, selector: SelectorLike, wait_for="visible", *, timeout=None, retries=3, initial_delay=0.5, backoff_factor=2.0, max_delay=5.0) -> Locator`
+  - 等待元素达到指定状态
+
+### 4. VisualValidator
 
 #### 初始化
 
@@ -355,70 +360,69 @@ def __init__(
 #### 主要方法
 
 - `validate(test_image_name: str, baseline_image_name: Optional[str] = None, threshold: Optional[float] = None, generate_diff: bool = True) -> Dict[str, Any]`
+  - 验证测试图像与基准图像的相似度
+
 - `update_baseline(test_image_name: str, baseline_image_name: Optional[str] = None) -> bool`
+  - 将测试图像更新为基准图像
+
 - `validate_directory(threshold: Optional[float] = None) -> Dict[str, Any]`
+  - 验证整个目录中的图像
+
 - `get_baseline_images() -> List[str]`
+  - 获取所有基准图像
+
 - `get_test_images() -> List[str]`
+  - 获取所有测试图像
 
-### 4. RealtimeLogMonitor
-
-#### 初始化
-
-```python
-def __init__(self, log_dir: Path, check_interval: float = 1.0)
-```
+### 5. Allure 附件
 
 #### 主要方法
 
-- `start() -> None`
-- `stop(timeout: float = 2.0) -> None`
+- `attach_json(data: Any, name: str, attachment_type: AttachmentType = AttachmentType.JSON) -> None`
+  - 添加 JSON 附件
 
-## 配置
+- `attach_file(source: Union[str, Path], name: str, attachment_type: Optional[AttachmentType] = None) -> None`
+  - 添加文件附件
 
-### 1. 截图辅助配置
+- `attach_image(source: Union[str, Path, bytes], name: str, attachment_type: AttachmentType = AttachmentType.PNG) -> None`
+  - 添加图像附件
 
-可以在 `config.py` 中配置以下选项：
+- `attach_jpg(source: Union[str, Path, bytes], name: str) -> None`
+  - 添加 JPG 图像附件
 
-- `SCREENSHOT_DIR`：截图保存目录
-- `SCREENSHOT_FORMAT`：默认截图格式
-- `SCREENSHOT_QUALITY`：默认截图质量
-- `SCREENSHOT_TIMEOUT`：截图超时时间
-- `HIGHLIGHT_WAIT_MS`：高亮等待时间
+- `attach_png(source: Union[str, Path, bytes], name: str) -> None`
+  - 添加 PNG 图像附件
 
-### 2. 视觉验证配置
+- `attach_text(content: str, name: str, attachment_type: AttachmentType = AttachmentType.TEXT) -> None`
+  - 添加文本附件
 
-可以在 `config.py` 中配置以下选项：
-
-- `VISUAL_BASELINE_DIR`：基准图像目录
-- `VISUAL_TEST_DIR`：测试图像目录
-- `VISUAL_DIFF_DIR`：差异图像输出目录
-- `VISUAL_VALIDATION_THRESHOLD`：相似度阈值
-
-### 3. 选择器辅助配置
-
-可以在 `config.py` 中配置以下选项：
-
-- `locale`：语言环境，用于国际化支持
+- `attach_xml(content: str, name: str) -> None`
+  - 添加 XML 附件
 
 ## 最佳实践
 
-### 1. 截图辅助最佳实践
+### 1. 网络捕获最佳实践
 
-- **使用上下文管理器**：对于需要高亮的操作，使用 `highlighted_context` 上下文管理器
+- **使用上下文管理器**：使用 `with network_capture(page) as capture:` 确保资源正确释放
+- **合理过滤**：使用过滤功能减少需要处理的请求数量
+- **及时分析**：在捕获块内及时分析请求和响应，避免内存占用过高
+- **结合断言**：将网络捕获与断言结合，验证 API 响应的正确性
+
+### 2. 截图辅助最佳实践
+
 - **合理命名**：为截图提供有意义的名称，便于后续分析
 - **设置自动清理**：对于长时间运行的测试，启用自动清理功能
 - **使用 Allure 集成**：启用 Allure 集成，自动将截图附加到报告
-- **安全路径**：避免在截图名称中使用特殊字符，依赖内置的安全路径处理
+- **选择合适的截图类型**：根据需要选择合适的截图类型（完整页面、可视区域、元素）
 
-### 2. 选择器辅助最佳实践
+### 3. 选择器辅助最佳实践
 
-- **使用结构化选择器**：对于复杂的定位，使用 `Selector` 对象而非字符串
-- **提供描述**：为选择器提供描述，便于调试和日志记录
-- **使用多种策略**：对于不稳定的元素，提供多种定位策略
+- **使用多种定位策略**：对于不稳定的元素，提供多种定位策略
 - **合理设置超时**：根据页面加载速度设置合理的超时时间
 - **使用重试机制**：对于不稳定的操作，使用重试机制提高可靠性
+- **提供详细的选择器描述**：为选择器提供描述，便于调试和日志记录
 
-### 3. 视觉验证最佳实践
+### 4. 视觉验证最佳实践
 
 - **选择合适的算法**：对于不同类型的页面，选择合适的比较算法
 - **设置合理的阈值**：根据页面特性设置合理的相似度阈值
@@ -426,13 +430,12 @@ def __init__(self, log_dir: Path, check_interval: float = 1.0)
 - **分析差异图像**：当验证失败时，分析差异图像找出原因
 - **验证关键页面**：只验证对视觉要求高的关键页面
 
-### 4. 日志监控最佳实践
+### 5. Allure 附件最佳实践
 
-- **在生产环境运行**：在生产环境中运行日志监控，及时发现密码泄露
-- **配置合适的间隔**：根据日志生成速度设置合适的检查间隔
-- **监控应急文件**：定期检查应急文件，及时处理泄露事件
-- **与告警系统集成**：将监控与告警系统集成，及时收到泄露通知
-- **定期检查规则**：定期检查和更新密码模式规则，适应新的泄露形式
+- **添加有意义的名称**：为附件提供有意义的名称，便于在报告中查找
+- **选择合适的附件类型**：根据内容类型选择合适的附件类型
+- **控制附件大小**：避免添加过大的附件，影响报告加载速度
+- **结合测试步骤**：在关键测试步骤添加附件，提高报告的可读性
 
 ## 依赖
 
@@ -450,19 +453,20 @@ pip install playwright allure-pytest opencv-python numpy tqdm
 
 ## 总结
 
-Common 模块是一个功能强大、易于使用的通用工具集合，为自动化测试提供了全面的支持：
+Core 模块是一个功能强大、易于使用的通用工具集合，为自动化测试提供了全面的支持：
 
+- **网络捕获**：捕获和分析网络请求，帮助调试和验证 API 调用
 - **截图辅助**：提供丰富的截图功能，支持各种场景的截图需求
 - **选择器辅助**：智能元素定位，提高测试的可靠性和稳定性
 - **视觉验证**：检测视觉回归，确保页面外观符合预期
-- **日志监控**：实时检测密码泄露，提高系统安全性
+- **Allure 附件**：丰富测试报告，提供更多测试上下文信息
 
-通过使用 Common 模块，您可以：
-- 更有效地管理测试截图
+通过使用 Core 模块，您可以：
+- 更有效地调试和分析网络请求
 - 提高元素定位的成功率
 - 及时发现视觉回归问题
-- 增强系统的安全性
 - 生成更丰富、更专业的测试报告
+- 提高测试的可靠性和稳定性
 
 ---
 

@@ -142,7 +142,8 @@ class EnvLoader:
             if "arm" in machine or "aarch64" in machine:
                 os.environ.setdefault("BROWSER_TYPE", "chromium")
 
-    def _detect_debug_mode(self) -> None:
+    @staticmethod
+    def _detect_debug_mode() -> None:
         """检测调试模式并设置相关变量"""
         debug_vars = ["DEBUG", "PYTEST_DEBUG", "TEST_DEBUG"]
         is_debug = any(os.getenv(var, "").lower() in ("true", "1", "yes") for var in debug_vars)
@@ -153,7 +154,8 @@ class EnvLoader:
             os.environ.setdefault("VIDEO_RECORDING", "always")
             os.environ.setdefault("PRESERVE_CONTEXT_ON_FAILURE", "true")
 
-    def _normalize_proxy_settings(self) -> None:
+    @staticmethod
+    def _normalize_proxy_settings() -> None:
         """标准化代理设置"""
         for proxy_var in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
             if proxy_url := os.getenv(proxy_var):
@@ -162,7 +164,8 @@ class EnvLoader:
                 os.environ[proxy_var] = proxy_url
                 break  # 只处理第一个找到的代理
 
-    def _detect_ca_certificates(self) -> None:
+    @staticmethod
+    def _detect_ca_certificates() -> None:
         """检测企业 CA 证书"""
         ca_paths = [
             os.getenv("REQUESTS_CA_BUNDLE"),
@@ -179,7 +182,8 @@ class EnvLoader:
                 os.environ.setdefault("CUSTOM_CA_BUNDLE", ca_path)
                 break
 
-    def _optimize_by_cpu_cores(self) -> None:
+    @staticmethod
+    def _optimize_by_cpu_cores() -> None:
         """根据 CPU 核心数优化并行度"""
         try:
             import psutil
@@ -190,7 +194,8 @@ class EnvLoader:
         except ImportError:
             pass
 
-    def _apply_restricted_mode(self) -> None:
+    @staticmethod
+    def _apply_restricted_mode() -> None:
         """应用受限环境（无网络/离线）优化"""
         restricted_vars = ["NO_INTERNET", "AIRGAPPED", "OFFLINE_MODE"]
         if any(os.getenv(var) for var in restricted_vars):
@@ -214,7 +219,7 @@ class EnvLoader:
         logger.info("Environment diagnostics:\n" +
                     "\n".join(f"  {k:20}: {v}" for k, v in diag_info.items()))
 
+
 if __name__ == "__main__":
     env_loader = EnvLoader()
     env_loader.load()
-   

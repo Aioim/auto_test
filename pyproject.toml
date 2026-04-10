@@ -19,24 +19,27 @@ dependencies = [
     "allure-python-commons>=2.13.0",
     "pyyaml>=6.0",
     "python-dotenv>=1.0.0",
-    "pydantic",
-    "allure-pytest",
+    "pydantic>=2.0.0",
+    "allure-pytest>=2.13.0",
+    "filelock>=3.13.0",  # 用于多进程安全
     
     # 数据库相关依赖
-    "sqlalchemy>=2.0",
-    "pymysql",
-    "psycopg2-binary",
-    "tqdm",
-    "faker",
+    "sqlalchemy>=2.0.0",
+    "pymysql>=1.1.0",
+    "psycopg2-binary>=2.9.9",
+    "tqdm>=4.66.0",
+    "faker>=20.0.0",
 
     # 用于环境检测
     "psutil>=5.9.0",  
 
-    # 其他
-    "opencv-python", # 额外功能（如 SIFT、SURF 等），可安装扩展包 pip install opencv-contrib-python
-    "numpy",
-    "cryptography",
-    "scikit-image"
+    # 视觉验证和图像处理
+    "opencv-python>=4.8.0",  # 额外功能（如 SIFT、SURF 等），可安装扩展包 pip install opencv-contrib-python
+    "numpy>=1.24.0",
+    "scikit-image>=0.21.0",
+
+    # 安全相关
+    "cryptography>=41.0.0"
     
 ]
 
@@ -46,4 +49,15 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+    "yaml_data(file, group, date, base_dir): Load test parameters from YAML data files",
+    "env: 指定允许运行的环境，例如 @pytest.mark.env('dev', 'staging')",
+    "smoke: 冒烟测试，验证核心功能",
+    "regression: 回归测试，验证已有功能未被破坏"
+]
+pythonpath = "."
+testpaths = ["tests"]
+addopts = "-v --strict-markers -vs --alluredir ./output/allure-results --clean-alluredir"
 

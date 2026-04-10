@@ -15,6 +15,9 @@ auto_test 是一个功能强大的自动化测试框架，基于 Python 和 Play
 - **视觉验证**：截图对比、元素级截图
 - **多格式报告**：支持 Allure、HTML、JUnit 等多种报告格式
 - **性能监控**：测试执行性能监控
+- **智能登录**：自动管理登录状态，支持多环境和多用户
+- **错误监控**：捕获页面弹窗、控制台错误、网络请求失败等
+- **数据库操作**：支持 MySQL、PostgreSQL、SQLite 等常见数据库
 
 ## 快速开始
 
@@ -67,10 +70,13 @@ pytest
 pytest tests/test_login.py
 
 # 运行带 Allure 报告的测试
-pytest --alluredir=reports/allure-results
+pytest --alluredir=output/allure-results
 
 # 生成 Allure 报告
-allure generate reports/allure-results -o reports/allure-report
+allure generate output/allure-results -o output/allure-report
+
+# 查看报告
+allure open output/allure-report
 ```
 
 ## 项目结构
@@ -91,18 +97,38 @@ auto_test/
 │   ├── baidu_selector.py  # 百度页面选择器
 │   └── base_page.py       # 基础页面类
 ├── src/                   # 源代码
+│   ├── auth/              # 认证和登录管理
+│   │   ├── __init__.py
+│   │   ├── cache_utils.py
+│   │   ├── login_cache.py
+│   │   └── smart_login.py
 │   ├── config/            # 配置管理
 │   │   ├── __init__.py
-│   │   ├── _path.py       # 路径管理
 │   │   ├── env_loader.py  # 环境变量加载器
 │   │   ├── locators_i18n.py # 国际化定位器
-│   │   ├── manager.py     # 配置管理器
+│   │   ├── path.py        # 路径管理
+│   │   ├── settings.py    # 配置设置
 │   │   └── yaml_loader.py # YAML配置加载器
-│   ├── utils/             # 工具模块
-│   │   ├── common/        # 通用工具
-│   │   ├── data/          # 数据处理
-│   │   ├── logger/        # 日志系统
-│   │   └── security/      # 安全相关
+│   ├── core/              # 核心功能
+│   │   ├── __init__.py
+│   │   ├── allure_attachments.py
+│   │   ├── network.py
+│   │   ├── screenshot.py
+│   │   ├── selector.py
+│   │   ├── visual.py
+│   │   └── wait.py
+│   ├── data/              # 数据管理
+│   │   ├── __init__.py
+│   │   ├── data_faker.py  # 测试数据生成
+│   │   ├── db_helper.py   # 数据库操作
+│   │   └── yaml_cases_loader.py # YAML测试用例加载
+│   ├── logger/            # 日志系统
+│   │   ├── __init__.py
+│   │   ├── lazy.py
+│   │   └── secure_log.py
+│   ├── monitoring/        # 错误监控
+│   │   ├── __init__.py
+│   │   └── error_monitor.py
 │   └── __init__.py
 ├── test_data/             # 测试数据
 │   ├── visual/            # 视觉测试数据
@@ -118,8 +144,7 @@ auto_test/
 ├── demo_dialog_effect.py  # 弹窗效果演示
 ├── demo_dialog_handling.py # 弹窗处理演示
 ├── pf_logger.py           # 日志演示
-├── pyproject.toml         # 项目配置
-├── pytest.ini             # pytest配置
+├── pyproject.toml         # 项目配置（包含pytest配置）
 └── test_simple_dialog.py  # 简单弹窗测试
 ```
 
@@ -127,73 +152,61 @@ auto_test/
 
 ### 1. 环境管理
 
-`src/config/env_loader.py` 提供智能环境检测和配置加载功能：
+`src/config/` 目录提供智能环境检测和配置加载功能：
 
-- 自动检测 CI/CD 环境（GitHub Actions、GitLab CI 等）
-- 检测容器环境并进行资源优化
-- 根据操作系统和架构进行特定优化
-- 支持从系统环境变量和 .env 文件加载配置
+- **env_loader.py**：自动检测 CI/CD 环境、容器环境和操作系统，并进行相应的优化配置
+- **yaml_loader.py**：从 YAML 文件加载配置，支持多环境配置
+- **settings.py**：基于 Pydantic 的配置管理，提供类型安全的配置访问
+- **locators_i18n.py**：提供页面元素文本的多语言映射功能
+- **path.py**：管理项目路径，提供统一的路径访问
 
 ### 2. 页面对象模型
 
 `pages/` 目录实现了标准化的 Page Object Model：
 
-- `base_page.py`：基础页面类，提供通用方法
-- `components/`：可复用组件
-- `baidu_page.py`：示例页面实现
+- **base_page.py**：基础页面类，提供通用方法，如导航、元素操作、断言等
+- **components/**：可复用组件，如头部导航、侧边栏等
+- **baidu_page.py**：示例页面实现，展示如何使用页面对象模式
 
-### 工具模块
+### 3. 认证管理
 
-#### 公共 API
+`src/auth/` 目录提供智能登录和认证管理功能：
 
-`utils` 模块提供了统一的公共 API，可以通过 `from utils import ...` 直接导入所需功能：
+- **smart_login.py**：智能登录管理，自动处理登录状态，支持缓存和多环境
+- **login_cache.py**：API 测试的 Token 缓存管理
+- **cache_utils.py**：浏览器登录状态缓存公共工具
 
-```python
-# 核心工具
-from utils import APIClient, login_cache, ErrorMonitor, monitor_errors
+### 4. 数据管理
 
-# 通用工具
-from utils import ScreenshotHelper, SelectorHelper, VisualValidator, RealtimeLogMonitor
+`src/data/` 目录提供数据处理和生成功能：
 
-# 数据工具
-from utils import load_yaml_file, TestDataGenerator, DatabaseHelper
+- **data_faker.py**：基于 Faker 的测试数据生成器，支持生成各种类型的测试数据
+- **yaml_cases_loader.py**：YAML 测试用例加载器，支持从 YAML 文件加载测试数据
+- **db_helper.py**：数据库操作助手，支持 MySQL、PostgreSQL、SQLite 等常见数据库
 
-# 日志系统
-from utils import logger, setup_logger, log_exception, log_step
+### 5. 核心功能
 
-# 安全工具
-from utils import SecretsManager, SecretStr, get_secret, set_secret
-```
+`src/core/` 目录提供核心功能模块：
 
-#### 通用工具 (`utils/common/`)
-- `screenshot_helper.py`：高级截图功能（支持元素高亮、标注）
-- `selector_helper.py`：智能选择器辅助
-- `visual_validator.py`：视觉验证工具
-- `smart_login.py`：智能登录功能，支持登录状态持久化
+- **screenshot.py**：高级截图功能，支持页面截图、元素截图、高亮标注等
+- **selector.py**：智能选择器辅助，支持多种定位策略和智能解析
+- **visual.py**：视觉验证工具，支持图像比较和视觉回归测试
+- **network.py**：网络捕获工具，支持捕获和分析网络请求
+- **allure_attachments.py**：Allure 报告附件工具，支持添加各种类型的附件
+- **wait.py**：等待工具，提供智能的元素等待和页面状态等待
 
-#### 数据工具 (`utils/data/`)
-- `data_faker.py`：测试数据生成
-- `data_loader.py`：数据加载
-- `yaml_cases_loader.py`：YAML 测试用例加载
-- `db_helper.py`：数据库操作助手
+### 6. 错误监控
 
-#### 日志系统 (`utils/logger/`)
-- 支持多级别日志
-- 结构化日志输出
-- 日志轮转和归档
-- 安全日志脱敏
-- 企业级安全日志系统
+`src/monitoring/` 目录提供错误监控功能：
 
-#### 安全工具 (`utils/security/`)
-- `env_encrypt.py`：环境变量加密
-- `secrets_manager.py`：密钥管理
-- `key_rotation.py`：密钥轮换
-- `secret_str.py`：防泄露敏感字符串容器
+- **error_monitor.py**：错误监控装饰器，支持捕获页面弹窗、控制台错误、网络请求失败等
 
-#### 核心工具
-- `api_client.py`：API 测试客户端，支持请求重试、响应断言
-- `login_cache.py`：登录 token 缓存管理
-- `error_monitor.py`：错误监控装饰器，支持页面错误捕获和截图
+### 7. 日志系统
+
+`src/logger/` 目录提供高级日志功能：
+
+- **secure_log.py**：安全日志系统，支持日志脱敏和结构化日志
+- **lazy.py**：延迟初始化日志，提高性能
 
 ## 测试用例编写
 
@@ -245,14 +258,16 @@ def test_login_with_data(page, yaml_data):
 
 ```python
 import pytest
+from auth.smart_login import SmartLogin
 from pages.dashboard_page import DashboardPage
 
-def test_dashboard_access(logged_in_page):
+def test_dashboard_access():
     """测试登录后访问仪表盘"""
-    dashboard_page = DashboardPage(logged_in_page)
-    dashboard_page.navigate()
-    assert dashboard_page.is_dashboard_displayed()
-    assert "dashboard" in logged_in_page.url.lower()
+    with SmartLogin(username="admin", password="password123") as (page, context):
+        dashboard_page = DashboardPage(page)
+        dashboard_page.navigate()
+        assert dashboard_page.is_dashboard_displayed()
+        assert "dashboard" in page.url.lower()
 ```
 
 ### API 测试
@@ -281,7 +296,7 @@ def test_api_endpoint(api_client):
 
 ```python
 import pytest
-from utils import monitor_errors
+from utils.monitoring import monitor_errors
 
 def test_with_error_monitoring(page):
     """测试错误监控功能"""
@@ -339,20 +354,20 @@ def test_with_error_monitoring(page):
 
 ```bash
 # 运行测试并生成 Allure 结果
-pytest --alluredir=reports/allure-results
+pytest --alluredir=output/allure-results
 
 # 生成 Allure 报告
-allure generate reports/allure-results -o reports/allure-report
+allure generate output/allure-results -o output/allure-report
 
 # 查看报告
-allure open reports/allure-report
+allure open output/allure-report
 ```
 
 ### HTML 报告
 
 ```bash
 # 运行测试并生成 HTML 报告
-pytest --html=reports/html/report.html
+pytest --html=output/html/report.html
 ```
 
 ## 最佳实践
@@ -382,6 +397,16 @@ pytest --html=reports/html/report.html
    - 实现重试机制
    - 处理异常情况
 
+6. **错误监控**：
+   - 使用错误监控装饰器捕获页面错误
+   - 合理设置错误过滤规则
+   - 启用实时日志输出
+
+7. **智能登录**：
+   - 使用智能登录管理登录状态
+   - 配置适当的缓存策略
+   - 处理多环境和多用户场景
+
 ## 故障排查
 
 ### 常见问题
@@ -406,14 +431,19 @@ pytest --html=reports/html/report.html
    - 检查环境变量是否正确设置
    - 检查配置文件格式
 
+5. **登录失败**：
+   - 检查用户名和密码是否正确
+   - 检查登录流程是否改变
+   - 检查登录缓存是否有效
+
 ### 日志分析
 
 ```bash
 # 查看测试日志
-cat reports/logs/test_run.log
+cat output/logs/test_run.log
 
 # 查看错误日志
-cat reports/logs/error_*.log
+cat output/logs/error_*.log
 ```
 
 ## CI/CD 集成
@@ -441,14 +471,14 @@ jobs:
           pip install -e .[dev]
           playwright install
       - name: Run tests
-        run: pytest --alluredir=reports/allure-results
+        run: pytest --alluredir=output/allure-results
       - name: Generate Allure report
-        run: allure generate reports/allure-results -o reports/allure-report
+        run: allure generate output/allure-results -o output/allure-report
       - name: Upload Allure report
         uses: actions/upload-artifact@v3
         with:
           name: allure-report
-          path: reports/allure-report
+          path: output/allure-report
 ```
 
 ### GitLab CI
@@ -465,19 +495,19 @@ test:
   script:
     - pip install -e .[dev]
     - playwright install
-    - pytest --alluredir=reports/allure-results
+    - pytest --alluredir=output/allure-results
   artifacts:
     paths:
-      - reports/allure-results
+      - output/allure-results
 
 report:
   stage: report
   image: frankescobar/allure-report-action
   script:
-    - allure generate reports/allure-results -o reports/allure-report
+    - allure generate output/allure-results -o output/allure-report
   artifacts:
     paths:
-      - reports/allure-report
+      - output/allure-report
 ```
 
 ## 贡献指南

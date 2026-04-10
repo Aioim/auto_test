@@ -51,7 +51,7 @@
 ### 基本使用
 
 ```python
-from utils.logger import logger
+from logger import logger
 
 # 基本日志记录
 logger.debug("调试信息")
@@ -64,7 +64,7 @@ logger.critical("严重错误")
 try:
     1 / 0
 except Exception:
-    from utils.logger import log_exception
+    from logger import log_exception
     log_exception(context="除法运算")
 ```
 
@@ -73,7 +73,7 @@ except Exception:
 #### 性能监控
 
 ```python
-from utils.logger import log_performance
+from logger import log_performance
 
 @log_performance(threshold_ms=100)  # 超过100ms标记为慢操作
 def slow_function():
@@ -89,31 +89,33 @@ result = slow_function()
 #### 步骤跟踪
 
 ```python
-from utils.logger import log_step
+from logger import log_step
 
 @log_step("数据处理")
 def process_data(data):
     # 处理数据
-    return processed_data
+    return [item * 2 for item in data]
 
 # 调用函数，自动记录步骤开始和完成
-result = process_data(raw_data)
+result = process_data([1, 2, 3, 4, 5])
 ```
 
 #### 执行时长记录
 
 ```python
-from utils.logger import log_duration
+from logger import log_duration
 
 with log_duration("数据库查询"):
     # 执行数据库查询
-    results = db.query("SELECT * FROM users")
+    import time
+    time.sleep(0.1)
+    results = ["结果1", "结果2"]
 ```
 
 #### API请求/响应日志
 
 ```python
-from utils.logger import request_logger
+from logger import request_logger
 
 # 记录请求
 request_id = request_logger.log_request(
@@ -132,7 +134,7 @@ request_logger.log_response(
 #### 安全事件记录
 
 ```python
-from utils.logger import log_security_event
+from logger import log_security_event
 
 # 记录安全事件
 log_security_event(
@@ -151,20 +153,17 @@ log_security_event(
 | 日志实例 | 用途 | 默认级别 | 日志文件 |
 |---------|------|---------|----------|
 | `logger` | 主日志 | INFO | test_run.log |
-| `api_logger` | API日志 | DEBUG | api.log |
-| `perf_logger` | 性能日志 | DEBUG | performance.log |
 | `security_logger` | 安全日志 | INFO | security.log |
-| `error` | 错误日志 | ERROR | error.log |
 
 ## 自定义日志器
 
 您可以创建自定义日志器以满足特定需求：
 
 ```python
-from utils.logger import setup_logger
+from logger import LazyLogger
 
 # 创建自定义日志器
-custom_logger = setup_logger(
+custom_logger = LazyLogger.get(
     name="my_app",
     log_level="DEBUG",
     log_to_console=True,
@@ -209,7 +208,7 @@ custom_logger.info("自定义日志信息")
 脱敏示例：
 
 ```python
-from utils.logger import logger, mask_sensitive_data
+from logger import logger, mask_sensitive_data
 
 # 自动脱敏
 logger.info("用户登录: username=admin, password=secret123")
@@ -226,7 +225,7 @@ print(desensitized)  # 输出: API密钥: sk-******
 ### 日志系统诊断
 
 ```python
-from utils.logger import diagnose_logger, print_logger_diagnosis
+from logger import diagnose_logger, print_logger_diagnosis
 
 # 诊断日志系统
 diagnosis = diagnose_logger()
@@ -238,7 +237,7 @@ print_logger_diagnosis(diagnosis)
 ### API日志验证
 
 ```python
-from utils.logger import verify_api_logging
+from logger import verify_api_logging
 
 # 验证API日志配置
 is_valid = verify_api_logging()
@@ -284,8 +283,8 @@ env = "development"
 ### 完整示例
 
 ```python
-from utils.logger import (
-    logger, api_logger, perf_logger, security_logger,
+from logger import (
+    logger, security_logger,
     log_exception, log_security_event, log_step, log_duration, log_performance,
     mask_sensitive_data, request_logger
 )
@@ -386,7 +385,7 @@ if __name__ == "__main__":
 ### 日志系统自检
 
 ```python
-from utils.logger import diagnose_logger, print_logger_diagnosis
+from logger import diagnose_logger, print_logger_diagnosis
 
 # 运行诊断
 diagnosis = diagnose_logger()

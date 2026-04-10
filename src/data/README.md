@@ -7,42 +7,30 @@ Data 模块是一个功能强大的测试数据管理工具集，提供了以下
 - **YAML 测试数据加载**：支持从 YAML 文件加载和验证测试数据
 - **测试数据生成**：基于 Faker 库的高性能测试数据生成器
 - **数据导出**：支持将生成的数据导出为 JSON 和 CSV 格式
+- **数据库操作**：提供通用的数据库连接和操作方法，支持 MySQL、PostgreSQL、SQLite 等常见数据库
 
 ## 安装依赖
 
 ```bash
 # 安装基础依赖
-pip install pyyaml faker
+pip install pyyaml faker sqlalchemy
 
 # 安装可选依赖（用于进度条显示）
 pip install tqdm
+
+# 安装数据库驱动（根据需要选择）
+pip install pymysql      # MySQL 驱动
+pip install psycopg2-binary  # PostgreSQL 驱动
+# SQLite 驱动已包含在 Python 标准库中
 ```
 
 ## 核心功能
 
 ### 1. YAML 测试数据加载
 
-Data 模块提供了两种 YAML 加载器，用于从 YAML 文件加载测试数据：
+Data 模块提供了 YAML 加载器，用于从 YAML 文件加载测试数据：
 
-#### 1.1 标准加载器 (`data_loader.py`)
-
-**功能**：
-- 加载 YAML 文件并返回标准化的数据结构
-- 自动处理单个用例（字典）和多个用例（列表）
-- 跳过无效数据并记录警告
-- 捕获异常并记录日志
-
-**返回结构**：
-```python
-{
-    "group_name": [
-        {"field1": "value1", "field2": "value2"},  # 用例 1
-        {"field1": "value3", "field2": "value4"}   # 用例 2
-    ]
-}
-```
-
-#### 1.2 严格加载器 (`yaml_cases_loader.py`)
+#### 1.1 严格加载器 (`yaml_cases_loader.py`)
 
 **功能**：
 - 严格验证 YAML 格式
@@ -53,6 +41,16 @@ Data 模块提供了两种 YAML 加载器，用于从 YAML 文件加载测试数
 **异常**：
 - `FileNotFoundError`：文件不存在或不是文件
 - `InvalidYamlFormatError`：YAML 格式验证失败
+
+**返回结构**：
+```python
+{
+    "group_name": [
+        {"field1": "value1", "field2": "value2"},  # 用例 1
+        {"field1": "value3", "field2": "value4"}   # 用例 2
+    ]
+}
+```
 
 ### 2. 测试数据生成器 (`TestDataGenerator`)
 
@@ -70,35 +68,38 @@ Data 模块提供了两种 YAML 加载器，用于从 YAML 文件加载测试数
 - 提供详细的日志记录
 - 支持数据导出为标准格式
 
+### 3. 数据库操作 (`DatabaseHelper`)
+
+**功能**：
+- **多数据库支持**：支持 MySQL、PostgreSQL、SQLite 等常见数据库
+- **连接管理**：提供连接池和会话管理
+- **SQL 执行**：支持执行原始 SQL 语句
+- **数据操作**：提供插入、更新、删除等操作的便捷方法
+- **批量操作**：支持批量插入数据
+- **上下文管理**：使用上下文管理器管理数据库会话
+
+**特点**：
+- 基于 SQLAlchemy，提供 ORM 支持
+- 自动处理连接超时和错误
+- 支持连接池优化
+- 提供详细的日志记录
+
 ## 使用示例
 
 ### 1. 加载 YAML 测试数据
 
-#### 使用标准加载器
-
 ```python
 from pathlib import Path
-from utils.data import load_yaml_file
-
-# 加载 YAML 文件
-data = load_yaml_file(Path("test_data/login_page.yaml"))
-
-# 访问测试数据
-login_cases = data.get("login_page_case", [])
-for case in login_cases:
-    print(f"Username: {case.get('username')}, Password: {case.get('password')}")
-```
-
-#### 使用严格加载器
-
-```python
-from pathlib import Path
-from utils.data.yaml_cases_loader import load_yaml_file, InvalidYamlFormatError
+from utils.data import load_yaml_file, InvalidYamlFormatError
 
 try:
     # 加载 YAML 文件
-data = load_yaml_file(Path("test_data/login_page.yaml"))
+    data = load_yaml_file(Path("test_data/login_page.yaml"))
     print("加载成功！")
+    # 访问测试数据
+    login_cases = data.get("login_page_case", [])
+    for case in login_cases:
+        print(f"Username: {case.get('username')}, Password: {case.get('password')}")
 except InvalidYamlFormatError as e:
     print(f"格式错误: {e}")
 except FileNotFoundError as e:
@@ -232,6 +233,98 @@ print(f"序列化 ID: {generator.use_strategy('user_seq_id')}")
 print(f"序列化 ID: {generator.use_strategy('user_seq_id')}")
 ```
 
+### 3. 数据库操作
+
+#### 基础用法
+
+```python
+from utils.data import db_helper, execute_sql, insert_data
+
+# 执行 SQL 查询
+results = execute_sql(
+    db_type="mysql",
+    host="localhost",
+    port=3306,
+    database="test_db",
+    user="root",
+    password="password",
+    sql="SELECT * FROM users WHERE age > :age",
+    params={"age": 18}
+)
+print(f"查询结果: {results}")
+
+# 插入数据
+insert_result = insert_data(
+    db_type="mysql",
+    host="localhost",
+    port=3306,
+    database="test_db",
+    user="root",
+    password="password",
+    table="users",
+    data={
+        "name": "John Doe",
+        "age": 30,
+        "email": "john@example.com"
+    }
+)
+print(f"插入结果: {insert_result} 行受影响")
+```
+
+#### 使用上下文管理器
+
+```python
+from utils.data import get_session
+
+# 使用上下文管理器管理会话
+with get_session(
+    db_type="sqlite",
+    database=":memory:"
+) as session:
+    # 创建表
+    session.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        age INTEGER NOT NULL,
+        email TEXT NOT NULL
+    )
+    """)
+    
+    # 插入数据
+    session.execute(
+        "INSERT INTO users (name, age, email) VALUES (:name, :age, :email)",
+        {"name": "Jane Doe", "age": 25, "email": "jane@example.com"}
+    )
+    
+    # 查询数据
+    result = session.execute("SELECT * FROM users")
+    users = result.fetchall()
+    print(f"用户列表: {users}")
+```
+
+#### 批量插入数据
+
+```python
+from utils.data import batch_insert_data
+
+# 准备批量数据
+users_data = [
+    {"name": "User 1", "age": 20, "email": "user1@example.com"},
+    {"name": "User 2", "age": 25, "email": "user2@example.com"},
+    {"name": "User 3", "age": 30, "email": "user3@example.com"}
+]
+
+# 批量插入
+batch_result = batch_insert_data(
+    db_type="sqlite",
+    database=":memory:",
+    table="users",
+    data_list=users_data
+)
+print(f"批量插入结果: {batch_result} 行受影响")
+```
+
 ## API 参考
 
 ### 1. YAML 加载函数
@@ -247,8 +340,7 @@ print(f"序列化 ID: {generator.use_strategy('user_seq_id')}")
 - 字典，键为组名，值为用例列表
 
 **注意**：
-- 该函数是从 `data_loader.py` 导入的，提供了更灵活的加载方式
-- 对于更严格的验证，请使用 `yaml_cases_loader.py` 中的同名函数
+- 该函数从 `yaml_cases_loader.py` 导入，提供严格的 YAML 格式验证
 
 ### 2. TestDataGenerator 类
 
@@ -313,6 +405,77 @@ def __init__(self, locale: str = 'zh_CN')
 
 `InvalidYamlFormatError` 是一个异常类，用于在 YAML 格式验证失败时抛出详细的错误信息。
 
+### 4. DatabaseHelper 类
+
+#### 初始化
+
+```python
+def __init__()
+```
+
+**功能**：初始化数据库辅助类，创建连接、引擎和会话的存储字典。
+
+#### 核心方法
+
+- `get_connection_string(db_type: str, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> str`
+  - 生成数据库连接字符串
+
+- `get_engine(db_type: str, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> Any`
+  - 获取数据库引擎
+
+- `get_session(db_type: str, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> Session`
+  - 获取数据库会话（上下文管理器）
+
+- `execute_sql(db_type: str, sql: str, params: Optional[Dict[str, Any]] = None, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]`
+  - 执行 SQL 语句
+
+- `insert_data(db_type: str, table: str, data: Dict[str, Any], host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 插入数据
+
+- `update_data(db_type: str, table: str, data: Dict[str, Any], condition: str, condition_params: Optional[Dict[str, Any]] = None, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 更新数据
+
+- `delete_data(db_type: str, table: str, condition: str, condition_params: Optional[Dict[str, Any]] = None, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 删除数据
+
+- `batch_insert_data(db_type: str, table: str, data_list: List[Dict[str, Any]], host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 批量插入数据
+
+- `get_connection(db_type: str, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> Any`
+  - 获取数据库原始连接
+
+- `close_connections() -> None`
+  - 关闭所有数据库连接
+
+- `close_engines() -> None`
+  - 关闭所有数据库引擎
+
+- `close_all() -> None`
+  - 关闭所有数据库连接和引擎
+
+#### 便捷函数
+
+- `get_db_helper() -> DatabaseHelper`
+  - 获取数据库辅助实例
+
+- `execute_sql(db_type: str, sql: str, params: Optional[Dict[str, Any]] = None, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]`
+  - 执行 SQL 语句的便捷函数
+
+- `insert_data(db_type: str, table: str, data: Dict[str, Any], host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 插入数据的便捷函数
+
+- `update_data(db_type: str, table: str, data: Dict[str, Any], condition: str, condition_params: Optional[Dict[str, Any]] = None, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 更新数据的便捷函数
+
+- `delete_data(db_type: str, table: str, condition: str, condition_params: Optional[Dict[str, Any]] = None, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 删除数据的便捷函数
+
+- `get_session(db_type: str, host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> Session`
+  - 获取数据库会话的便捷函数
+
+- `batch_insert_data(db_type: str, table: str, data_list: List[Dict[str, Any]], host: Optional[str] = None, port: Optional[int] = None, database: Optional[str] = None, user: Optional[str] = None, password: Optional[str] = None, **kwargs) -> int`
+  - 批量插入数据的便捷函数
+
 ## 最佳实践
 
 ### 1. YAML 测试数据结构
@@ -347,11 +510,13 @@ login_failures:
 - **导出为标准格式**：将生成的数据导出为 JSON 或 CSV，方便后续分析和使用
 - **注册自定义策略**：对于复杂的数据生成需求，使用自定义策略
 
-### 3. 性能优化
+### 3. 数据库操作最佳实践
 
-- **批量生成**：对于大量数据，使用 `batch_generate` 或 `batch_generate_async`
-- **异步生成**：对于 I/O 密集型操作，使用异步生成提高性能
-- **进度显示**：生成大量数据时，启用进度显示，提升用户体验
+- **使用上下文管理器**：使用 `get_session` 的上下文管理器，确保会话正确关闭
+- **参数化查询**：使用参数化查询，防止 SQL 注入
+- **批量操作**：对于大量数据，使用批量操作提高性能
+- **错误处理**：适当处理数据库操作中的异常
+- **连接管理**：合理管理数据库连接，避免连接泄漏
 
 ## 依赖
 
@@ -359,11 +524,21 @@ login_failures:
 - **faker**：用于生成测试数据
 - **tqdm**：用于显示生成进度（可选）
 - **python-dateutil**：用于日期时间处理（Faker 依赖）
+- **sqlalchemy**：用于数据库 ORM 和连接管理
+- **pymysql**：MySQL 数据库驱动（可选）
+- **psycopg2-binary**：PostgreSQL 数据库驱动（可选）
+- **sqlite3**：SQLite 数据库驱动（Python 标准库）
 
 ## 安装
 
 ```bash
-pip install pyyaml faker tqdm
+# 安装基础依赖
+pip install pyyaml faker tqdm sqlalchemy
+
+# 安装数据库驱动（根据需要选择）
+pip install pymysql      # MySQL 驱动
+pip install psycopg2-binary  # PostgreSQL 驱动
+# SQLite 驱动已包含在 Python 标准库中
 ```
 
 ## 总结
@@ -375,13 +550,15 @@ Data 模块是一个功能强大、灵活易用的测试数据管理工具，它
 - 高效的批量数据生成
 - 灵活的自定义策略机制
 - 标准的数据导出功能
+- 通用的数据库操作能力
 
 通过使用 Data 模块，您可以：
 - 更有效地管理测试数据
 - 生成真实、多样化的测试数据
 - 提高测试的覆盖率和可靠性
 - 减少手动数据准备的工作量
+- 简化数据库操作和测试数据的存储与管理
 
 ---
 
-**注意**：模块中存在命名冲突，`load_yaml_file` 函数被从两个不同的文件导入。在使用时，默认导入的是 `data_loader.py` 中的实现。如果需要使用严格验证版本，请直接从 `yaml_cases_loader` 模块导入。
+**注意**：`load_yaml_file` 函数从 `yaml_cases_loader.py` 导入，提供严格的 YAML 格式验证。

@@ -1,5 +1,5 @@
 """
-Playwright 错误监控装饰器（优化版，依赖 ScreenshotHelper）
+Playwright 错误监控装饰器（优化版 v2，依赖 ScreenshotHelper）
 
 提供错误监控能力：捕获页面弹窗、控制台错误、请求失败、页面自定义错误元素。
 截图功能完全委托给 ScreenshotHelper，实现统一管理。
@@ -10,6 +10,12 @@ P0/P1 修复：
 - 使用批量 evaluate 检查错误元素，性能提升
 - 支持错误忽略模式（正则）
 - 支持交互模式与自动继续模式
+
+v2 优化：
+- 增加 log_immediately 参数，实时输出错误信息，消除反馈延迟
+- 修复 check_errors 重复调用时仅截一次图的问题
+- 增加 fast_screenshot 选项，使用视口截图提升速度
+- 优化监听器移除的异常处理，避免误捕获
 """
 
 from functools import wraps
@@ -20,7 +26,8 @@ import traceback
 import re
 from collections import deque
 
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Page, Error as PlaywrightError
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from logger import logger
 from core.screenshot import ScreenshotHelper, ScreenshotType, ScreenshotMetadata
 
@@ -43,6 +50,8 @@ class ErrorMonitor:
         ignore_errors: Optional[List[str]] = None,
         interactive_mode: bool = False,
         auto_continue_after_screenshot: bool = False,
+        log_immediately: bool = False,          # 新增：是否实时输出错误日志
+        fast_screenshot: bool = False,           # 新增：是否使用快速截图模式（视口截图）
     ):
         """
         初始化错误监控器
@@ -57,6 +66,8 @@ class ErrorMonitor:
             ignore_errors: 忽略的错误消息模式列表（支持正则表达式字符串）
             interactive_mode: 交互模式，出现错误时暂停并等待用户按键继续
             auto_continue_after_screenshot: 自动继续模式，截图后自动继续执行（不抛出异常，优先级高于 raise_on_error）
+            log_immediately: 是否在监听到错误时立即打印日志（减少反馈延迟）
+            fast_screenshot: 使用视口截图代替全页截图，提升截图速度
         """
         self.page = page
         self.func_name = func_name
@@ -64,6 +75,8 @@ class ErrorMonitor:
         self.ignore_patterns = [re.compile(pattern) for pattern in (ignore_errors or [])]
         self.interactive_mode = interactive_mode
         self.auto_continue_after_screenshot = auto_continue_after_screenshot
+        self.log_immediately = log_immediately
+        self.fast_screenshot = fast_screenshot
 
         # 错误记录容器（使用 deque 限制最大长度）
         self.dialogs: deque = deque(maxlen=max_errors)
@@ -115,12 +128,14 @@ class ErrorMonitor:
                 return
 
             self.dialogs.append(dialog_info)
-            logger.warning(f"⚠️ 检测到弹窗 [{dialog.type}]: {dialog.message}")
 
-            # 原生弹窗无法被 page.screenshot() 捕获，所以这里不尝试截图
-            # 统一在 check_errors 时截图（但弹窗已被 accept，截不到内容）
-            # 因此仅记录，不依赖截图
+            # 实时日志输出（若启用）
+            if self.log_immediately:
+                logger.warning(f"⚠️ [实时] 检测到弹窗 [{dialog.type}]: {dialog.message}")
+            else:
+                logger.debug(f"检测到弹窗 [{dialog.type}]: {dialog.message}")
 
+            # 原生弹窗无法被 page.screenshot() 捕获，因此仅记录，不依赖截图
             # 自动接受对话框，避免测试阻塞
             try:
                 dialog.accept()
@@ -146,7 +161,11 @@ class ErrorMonitor:
                 return
 
             self.console_errors.append(error_info)
-            logger.debug(f"控制台 {msg.type}: {msg.text}")
+
+            if self.log_immediately:
+                logger.warning(f"⚠️ [实时] 控制台 {msg.type}: {msg.text}")
+            else:
+                logger.debug(f"控制台 {msg.type}: {msg.text}")
 
         return on_console
 
@@ -158,12 +177,17 @@ class ErrorMonitor:
             if self._should_ignore(error_text):
                 return
 
-            self.failed_requests.append({
+            error_info = {
                 "url": request.url,
                 "failure": failure,
                 "timestamp": time.time()
-            })
-            logger.debug(f"请求失败：{request.url} - {failure}")
+            }
+            self.failed_requests.append(error_info)
+
+            if self.log_immediately:
+                logger.warning(f"⚠️ [实时] 请求失败：{request.url} - {failure}")
+            else:
+                logger.debug(f"请求失败：{request.url} - {failure}")
 
         return on_request_failed
 
@@ -181,27 +205,37 @@ class ErrorMonitor:
             self.page.remove_listener("console", self._console_handler)
             self.page.remove_listener("requestfailed", self._request_failed_handler)
             logger.debug(f"ErrorMonitor 监听器已移除 (func={self.func_name})")
+        except PlaywrightError as e:
+            # 页面已关闭等正常情况，静默处理
+            if "closed" in str(e).lower() or "target" in str(e).lower():
+                logger.debug(f"页面已关闭，监听器移除时忽略异常: {e}")
+            else:
+                logger.warning(f"移除监听器时发生 Playwright 异常: {e}")
         except Exception as e:
-            logger.warning(f"移除监听器失败：{e}")
+            # 其他未知异常，记录警告但不抛出
+            logger.warning(f"移除监听器时发生未预期异常: {e}")
 
     def _take_error_screenshot(self, error_type: str, error_message: str = "") -> Optional[ScreenshotMetadata]:
         """
         使用 ScreenshotHelper 截取错误截图
+
+        支持快速模式（视口截图），提升截图速度。
         """
         if not self.screenshot_on_error or self.screenshot_helper is None:
             return None
 
         if self.screenshot_taken:
-            logger.debug("已截取过截图，跳过重复截图")
+            logger.debug("本次检查已截取过截图，跳过重复截图")
             return self.screenshot_metadata
 
         try:
+            screenshot_type = ScreenshotType.VIEWPORT if self.fast_screenshot else ScreenshotType.FULL_PAGE
             metadata = self.screenshot_helper.take_error_screenshot(
                 error_type=error_type,
                 func_name=self.func_name,
                 error_message=error_message[:200] if error_message else None,
-                screenshot_type=ScreenshotType.FULL_PAGE,
-                additional_tags={"source": "error_monitor"},
+                screenshot_type=screenshot_type,
+                additional_tags={"source": "error_monitor", "fast": str(self.fast_screenshot)},
                 add_timestamp=True
             )
             self.screenshot_taken = True
@@ -219,12 +253,18 @@ class ErrorMonitor:
         """
         检查各类错误（不再支持 selector_timeout，因为使用批量 evaluate 无超时）
 
+        每次调用会重置截图标志，允许多次截图。
+
         Args:
             error_selectors: 页面上错误元素的 CSS 选择器列表
 
         Returns:
             包含所有错误信息的字典
         """
+        # 重置截图标志，使每次 check_errors 都可以重新截图
+        self.screenshot_taken = False
+        self.screenshot_metadata = None
+
         logger.debug(f"开始检查错误 (func={self.func_name})...")
 
         # 收集页面错误元素（一次性 evaluate，性能最优）
@@ -258,8 +298,9 @@ class ErrorMonitor:
             page_errors
         )
 
-        # 如果有错误且尚未截图，立即截图（错误类型优先取第一个）
+        # 如果有错误且尚未截图，立即截图
         if has_any_error and not self.screenshot_taken:
+            # 确定错误类型（用于截图标签）
             error_type = "PageError"
             if self.dialogs:
                 error_type = f"Dialog_{self.dialogs[0]['type']}"
@@ -342,6 +383,8 @@ def monitor_errors(
     max_errors: int = 100,
     ignore_errors: Optional[List[str]] = None,
     screenshot_helper: Optional[ScreenshotHelper] = None,
+    log_immediately: bool = False,      # 新增
+    fast_screenshot: bool = False,      # 新增
 ):
     """
     错误监控装饰器工厂
@@ -357,6 +400,8 @@ def monitor_errors(
         max_errors: 每种类型最多记录的错误数量
         ignore_errors: 忽略的错误消息模式列表（正则表达式字符串）
         screenshot_helper: 可选的 ScreenshotHelper 实例（推荐传入）
+        log_immediately: 是否在监听到错误时立即打印日志（消除反馈延迟）
+        fast_screenshot: 使用视口截图代替全页截图，提升速度
 
     Returns:
         装饰器函数
@@ -376,6 +421,8 @@ def monitor_errors(
                 ignore_errors=ignore_errors,
                 interactive_mode=interactive_mode,
                 auto_continue_after_screenshot=auto_continue_after_screenshot,
+                log_immediately=log_immediately,
+                fast_screenshot=fast_screenshot,
             )
 
             errors: Dict[str, Any] = {}
@@ -451,7 +498,9 @@ def test_alert_screenshot(page: Page, screenshot_dir: str = "./test_screenshots"
         screenshot_on_error=True,
         screenshot_dir=screenshot_dir,
         raise_on_error=False,
-        auto_continue_after_screenshot=True
+        auto_continue_after_screenshot=True,
+        log_immediately=True,   # 演示实时日志
+        fast_screenshot=True    # 快速截图模式
     )
     def trigger_alert():
         page.goto("data:text/html,<h1>测试页面</h1>")
@@ -469,7 +518,7 @@ def test_alert_screenshot(page: Page, screenshot_dir: str = "./test_screenshots"
 # ==================== 使用示例 ====================
 
 if __name__ == "__main__":
-    print("✅ ErrorMonitor 模块加载成功（P0/P1 修复版，依赖 ScreenshotHelper）")
+    print("✅ ErrorMonitor 模块加载成功（P0/P1 修复版 v2，依赖 ScreenshotHelper）")
     print("\n=== 基本使用示例 ===")
     print("""
 from playwright.sync_api import sync_playwright
@@ -489,7 +538,9 @@ with sync_playwright() as p:
         raise_on_error=True,
         screenshot_on_error=True,
         ignore_errors=[r"404 Not Found", r"favicon\\.ico"],
-        auto_continue_after_screenshot=False
+        auto_continue_after_screenshot=False,
+        log_immediately=True,      # 实时输出错误，消除延迟
+        fast_screenshot=False      # 默认全屏，可设为 True 提速
     )
     def test_login():
         page.goto("https://example.com/login")

@@ -14,8 +14,8 @@ def login_page(page: Page, username: str, password: str, env: str = "beta", **kw
     配置建议：在 settings 中定义不同环境的登录选择器映射
     """
     # 获取环境相关配置
-    env_config = getattr(settings, "LOGIN_CONFIG", {}).get(env, {})
-    login_url = env_config.get("url") or f"{settings.BASE_URL}/login"
+    env_config = getattr(settings, "login_config", {}).get(env, {})
+    login_url = env_config.get("url") or f"{settings.base_url}/login"
     username_sel = env_config.get("username_selector", "#username")
     password_sel = env_config.get("password_selector", "#password")
     submit_sel = env_config.get("submit_selector", "button[type=submit]")
