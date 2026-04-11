@@ -1,6 +1,9 @@
 from pathlib import Path
 import yaml
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+# 常量定义
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB，防 DoS
 
 
 class InvalidYamlFormatError(ValueError):
@@ -8,11 +11,16 @@ class InvalidYamlFormatError(ValueError):
     pass
 
 
-def load_yaml_file(file_path: Path) -> Dict[str, List[Dict[str, Any]]]:
+def load_yaml_file(
+        file_path: Path,
+        *,
+        allow_empty: bool = False
+) -> Dict[str, List[Dict[str, Any]]]:
     """
     加载并严格验证 YAML 测试数据（单一职责：仅处理文件加载与验证）
 
     :param file_path: YAML 文件的完整绝对路径
+    :param allow_empty: 是否允许空组（{} 或 []），默认 False 禁止空组
     :return: 统一结构 {group_name: [case_dict1, case_dict2, ...]}
     :raises FileNotFoundError: 文件不存在或非文件
     :raises InvalidYamlFormatError: 格式验证失败
@@ -23,12 +31,9 @@ def load_yaml_file(file_path: Path) -> Dict[str, List[Dict[str, Any]]]:
     if not file_path.is_file():
         raise FileNotFoundError(f"路径不是文件: {file_path}")
 
-    # 安全性：限制文件大小（防 DoS）
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     if file_path.stat().st_size > MAX_FILE_SIZE:
         raise InvalidYamlFormatError(f"YAML 文件过大 (>10MB): {file_path}")
 
-    # 读取并解析 YAML
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             raw_data = yaml.safe_load(f)
@@ -46,20 +51,25 @@ def load_yaml_file(file_path: Path) -> Dict[str, List[Dict[str, Any]]]:
             f"文件: {file_path}"
         )
 
-    # 严格验证并标准化
     normalized_data: Dict[str, List[Dict[str, Any]]] = {}
 
     for group_name, value in raw_data.items():
-        _validate_group_value(group_name, value, file_path)
+        _validate_group_value(group_name, value, file_path, allow_empty=allow_empty)
         normalized_data[group_name] = [value] if isinstance(value, dict) else value
 
     return normalized_data
 
 
-def _validate_group_value(group_name: str, value: Any, file_path: Path) -> None:
+def _validate_group_value(
+        group_name: str,
+        value: Any,
+        file_path: Path,
+        *,
+        allow_empty: bool = False
+) -> None:
     """验证单个测试组的值格式"""
     if isinstance(value, dict):
-        if not value:
+        if not value and not allow_empty:
             _raise_format_error(
                 group_name=group_name,
                 message=(
@@ -75,7 +85,7 @@ def _validate_group_value(group_name: str, value: Any, file_path: Path) -> None:
         return
 
     if isinstance(value, list):
-        if not value:
+        if not value and not allow_empty:
             _raise_format_error(
                 group_name=group_name,
                 message=(
@@ -107,7 +117,7 @@ def _validate_group_value(group_name: str, value: Any, file_path: Path) -> None:
                     ),
                     file_path=file_path
                 )
-            if not item:
+            if not item and not allow_empty:
                 _raise_format_error(
                     group_name=group_name,
                     message=f"组 '{group_name}' 的第 {idx + 1} 个元素不能为空字典。",
@@ -115,7 +125,6 @@ def _validate_group_value(group_name: str, value: Any, file_path: Path) -> None:
                 )
         return
 
-    # 标量值（字符串/数字/布尔等）→ 严格禁止
     _raise_format_error(
         group_name=group_name,
         message=(

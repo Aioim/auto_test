@@ -1,5 +1,6 @@
 """
-BasePage - Page Object Pattern 基类
+BasePage - Page Object Pattern 基类（重构版）
+
 提供通用的页面操作方法，通过 Mixin 组合各功能模块。
 所有页面对象类应继承此类。
 """
@@ -10,13 +11,12 @@ import re
 import os
 from contextlib import contextmanager
 from typing import (
-    Any, Callable, Dict, Generator, List, Literal, Optional, Tuple, Union
+    Any, Callable, Dict, Generator, List, Literal, Optional, Tuple, Union, Pattern
 )
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs, urlunparse
-from uuid import uuid4
 
 from playwright.sync_api import (
-    Page, Locator, Response, Frame, TimeoutError as PlaywrightTimeoutError
+    Page, Locator, Response, Frame, TimeoutError as PlaywrightTimeoutError, expect as playwright_expect
 )
 
 from config import settings
@@ -24,7 +24,6 @@ from logger import logger
 from core.selector import (
     SelectorHelper, Selector, SelectorLike, ResolveInfo, FrameNotFoundError
 )
-from core.screenshot import ScreenshotHelper
 
 
 # ============================================================================
@@ -35,7 +34,7 @@ class NavigationMixin:
     """导航相关功能"""
 
     def goto(self, url: str, timeout: Optional[int] = None,
-             wait_until: Literal["load", "domcontentloaded", "networkidle", "commit"] = "load") -> Response:
+             wait_until: Literal["load", "domcontentloaded", "networkidle", "commit"] = "load") -> Optional[Response]:
         """导航到指定 URL（支持相对路径拼接 base_url）"""
         if not url.startswith(("http://", "https://")) and self.base_url:
             url = urljoin(self.base_url, url)
@@ -47,7 +46,7 @@ class NavigationMixin:
         return response
 
     def reload(self, timeout: Optional[int] = None,
-               wait_until: str = "load") -> Response:
+               wait_until: str = "load") -> Optional[Response]:
         logger.info("Reloading page...")
         return self.page.reload(timeout=timeout, wait_until=wait_until)
 
@@ -85,27 +84,32 @@ class ElementActionsMixin:
              retries: Optional[int] = None,
              initial_delay: float = 0.5,
              backoff_factor: float = 2.0,
-             max_delay: float = 5.0) -> Locator:
+             max_delay: float = 5.0,
+             **kwargs) -> Locator:
         """查找元素并等待到指定状态，支持重试退避"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         retries = retries if retries is not None else self.DEFAULT_RETRIES
-        # 移除 **kwargs 传递，避免与显式参数冲突
         return SelectorHelper.find(
             self.page, selector, wait_for=wait_for,
             timeout=timeout, retries=retries,
             initial_delay=initial_delay, backoff_factor=backoff_factor,
-            max_delay=max_delay
+            max_delay=max_delay, **kwargs
         )
 
     def exists(self, selector: SelectorLike,
                timeout: Optional[int] = None,
-               retries: Optional[int] = None) -> bool:
-        """检查元素是否存在（快速检查，默认超时 1 秒）"""
-        # 默认超时 1000 毫秒，平衡速度与可靠性
-        timeout = timeout if timeout is not None else 1000
+               retries: Optional[int] = None,
+               **kwargs) -> bool:
+        """
+        检查元素是否存在（快速检查）
+        注意：默认 timeout=None 时使用 100ms 快速失败，retries 默认为 1。
+        若需要更可靠的检查，请显式传递 timeout 和 retries。
+        """
+        if timeout is None:
+            timeout = 100  # 毫秒，快速失败
         retries = retries if retries is not None else 1
         return SelectorHelper.exists(
-            self.page, selector, timeout=timeout, retries=retries
+            self.page, selector, timeout=timeout, retries=retries, **kwargs
         )
 
     def wait_for(self, selector: SelectorLike,
@@ -125,115 +129,140 @@ class ElementActionsMixin:
               force: bool = False,
               no_wait_after: bool = False,
               position: Optional[Dict[str, float]] = None,
-              modifiers: Optional[List[str]] = None) -> None:
+              modifiers: Optional[List[str]] = None,
+              **kwargs) -> None:
         """点击元素"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         retries = retries if retries is not None else self.DEFAULT_RETRIES
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout, retries=retries)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, retries=retries, **kwargs)
         opts = {"timeout": timeout, "force": force, "no_wait_after": no_wait_after}
         if position:
             opts["position"] = position
         if modifiers:
             opts["modifiers"] = modifiers
-        logger.info(f"Clicking element: {selector}")
+        logger.debug(f"Clicking element: {selector}")
         locator.click(**opts)
 
     def double_click(self, selector: SelectorLike,
                      wait_for: str = "visible",
                      timeout: Optional[int] = None,
-                     force: bool = False) -> None:
+                     force: bool = False,
+                     **kwargs) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        logger.info(f"Double clicking element: {selector}")
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        logger.debug(f"Double clicking element: {selector}")
         locator.dblclick(timeout=timeout, force=force)
 
     def right_click(self, selector: SelectorLike,
                     wait_for: str = "visible",
-                    timeout: Optional[int] = None) -> None:
+                    timeout: Optional[int] = None,
+                    **kwargs) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        logger.info(f"Right clicking element: {selector}")
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        logger.debug(f"Right clicking element: {selector}")
         locator.click(button="right", timeout=timeout)
 
     def hover(self, selector: SelectorLike,
               wait_for: str = "visible",
-              timeout: Optional[int] = None) -> None:
+              timeout: Optional[int] = None,
+              **kwargs) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        logger.info(f"Hovering over element: {selector}")
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        logger.debug(f"Hovering over element: {selector}")
         locator.hover(timeout=timeout)
 
     # ----- 输入操作 -----
     def fill(self, selector: SelectorLike, value: str,
              wait_for: str = "visible",
              timeout: Optional[int] = None,
-             retries: Optional[int] = None) -> None:
+             retries: Optional[int] = None,
+             **kwargs) -> None:
         """填充输入框（先清空再输入）"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         retries = retries if retries is not None else self.DEFAULT_RETRIES
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout, retries=retries)
-        logger.info(f"Filling element with value: {value[:50]}")
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, retries=retries, **kwargs)
+        logger.debug(f"Filling element with value: {value[:50]}")
         locator.fill(value, timeout=timeout)
 
-    # 注意：locator.type 已弃用，故移除 type 方法，请使用 fill 或 press_sequentially
+    def type(self, selector: SelectorLike, text: str,
+             wait_for: str = "visible",
+             timeout: Optional[int] = None,
+             delay: int = 0,
+             **kwargs) -> None:
+        """逐字符输入"""
+        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        logger.debug(f"Typing text: {text[:50]}")
+        locator.type(text, delay=delay, timeout=timeout)
 
     def clear(self, selector: SelectorLike,
               wait_for: str = "visible",
-              timeout: Optional[int] = None) -> None:
+              timeout: Optional[int] = None,
+              **kwargs) -> None:
         """清空输入框"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        logger.info("Clearing element")
-        locator.clear()
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        logger.debug("Clearing element")
+        locator.clear(timeout=timeout)  # 修复：传递 timeout
 
     def press(self, selector: SelectorLike, key: str,
               wait_for: str = "visible",
-              timeout: Optional[int] = None) -> None:
-        """按下单个按键（支持修饰键组合，如 'Control+A'）"""
+              timeout: Optional[int] = None,
+              **kwargs) -> None:
+        """按下键盘按键"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        logger.info(f"Pressing key: {key}")
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        logger.debug(f"Pressing key: {key}")
         locator.press(key, timeout=timeout)
 
-    def press_sequentially(self, selector: SelectorLike, keys: List[str],
+    def press_sequentially(self, selector: SelectorLike, text: str,
                            wait_for: str = "visible",
                            timeout: Optional[int] = None,
-                           delay: int = 100) -> None:
-        """依次按下多个独立按键（每个按键单独触发，适用于功能键序列）"""
+                           delay: int = 100,
+                           **kwargs) -> None:
+        """
+        依次输入文本（支持功能键？建议仅用于普通字符）
+        注意：如需输入功能键（如 Enter, Tab），请使用 press() 方法。
+        """
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        logger.info(f"Pressing keys sequentially: {keys}")
-        for key in keys:
-            locator.press(key, timeout=timeout, delay=delay)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        locator.press_sequentially(text, delay=delay, timeout=timeout)
 
     # ----- 获取文本与属性 -----
     def text(self, selector: SelectorLike,
              wait_for: str = "visible",
-             timeout: Optional[int] = None) -> str:
+             timeout: Optional[int] = None,
+             **kwargs) -> str:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         return locator.inner_text()
 
     def all_texts(self, selector: SelectorLike,
                   wait_for: str = "attached",
-                  timeout: Optional[int] = None) -> List[str]:
+                  timeout: Optional[int] = None,
+                  **kwargs) -> List[str]:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         return locator.all_inner_texts()
 
     def attribute(self, selector: SelectorLike, name: str,
                   wait_for: str = "visible",
-                  timeout: Optional[int] = None) -> Optional[str]:
+                  timeout: Optional[int] = None,
+                  **kwargs) -> Optional[str]:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         return locator.get_attribute(name)
 
     def all_attributes(self, selector: SelectorLike, name: str,
                        wait_for: str = "attached",
-                       timeout: Optional[int] = None) -> List[Optional[str]]:
+                       timeout: Optional[int] = None,
+                       **kwargs) -> List[Optional[str]]:
+        """获取所有匹配元素的指定属性值列表"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        return locator.all_get_attributes(name)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        # 修复：使用 all() 遍历所有匹配元素
+        elements = locator.all()
+        return [el.get_attribute(name) for el in elements]
 
     # ----- 状态检查 -----
     def is_checked(self, selector: SelectorLike,
@@ -277,93 +306,80 @@ class ElementActionsMixin:
     def select_option(self, selector: SelectorLike,
                       value: Union[str, List[str]],
                       wait_for: str = "visible",
-                      timeout: Optional[int] = None) -> None:
+                      timeout: Optional[int] = None,
+                      **kwargs) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         if isinstance(value, str):
             value = [value]
-        logger.info(f"Selecting options: {value}")
+        logger.debug(f"Selecting options: {value}")
         locator.select_option(value, timeout=timeout)
 
     def upload_file(self, selector: SelectorLike,
                     file_path: Union[str, List[str]],
                     wait_for: str = "visible",
-                    timeout: Optional[int] = None) -> None:
+                    timeout: Optional[int] = None,
+                    **kwargs) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         if isinstance(file_path, str):
             file_path = [file_path]
-        logger.info(f"Uploading files: {file_path}")
+        logger.debug(f"Uploading files: {file_path}")
         locator.set_input_files(file_path, timeout=timeout)
 
     def clear_file(self, selector: SelectorLike,
                    wait_for: str = "visible",
-                   timeout: Optional[int] = None) -> None:
+                   timeout: Optional[int] = None,
+                   **kwargs) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
-        logger.info("Clearing uploaded files")
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
+        logger.debug("Clearing uploaded files")
         locator.set_input_files([], timeout=timeout)
 
 
 class AssertionMixin:
-    """断言功能（使用 find 等待元素，提高稳定性）"""
+    """断言功能"""
 
     def assert_exists(self, selector: SelectorLike,
                       message: Optional[str] = None,
                       timeout: Optional[int] = None) -> None:
-        """断言元素存在（等待 attached 状态）"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        try:
-            self.find(selector, wait_for="attached", timeout=timeout)
-        except PlaywrightTimeoutError:
-            msg = message or f"Element should exist: {selector}"
-            raise AssertionError(msg)
+        exists = self.exists(selector, timeout=timeout, retries=1)  # 使用传入的 timeout
+        msg = message or f"Element should exist: {selector}"
+        assert exists, msg
 
     def assert_not_exists(self, selector: SelectorLike,
                           message: Optional[str] = None,
                           timeout: Optional[int] = None) -> None:
-        """断言元素不存在（等待 detach 或检查 count）"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.resolve(selector)
-        try:
-            # 等待元素 detached，若超时则说明元素仍然存在
-            locator.wait_for(state="detached", timeout=timeout)
-        except PlaywrightTimeoutError:
-            # 若未 detach，检查是否真的存在
-            if locator.count() > 0:
-                msg = message or f"Element should not exist: {selector}"
-                raise AssertionError(msg)
-        # 如果元素从未存在，wait_for(detached) 也会超时，但 count() == 0，所以通过
+        exists = self.exists(selector, timeout=timeout, retries=1)
+        msg = message or f"Element should not exist: {selector}"
+        assert not exists, msg
 
     def assert_visible(self, selector: SelectorLike,
                        message: Optional[str] = None,
                        timeout: Optional[int] = None) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        try:
-            self.find(selector, wait_for="visible", timeout=timeout)
-        except PlaywrightTimeoutError:
-            msg = message or f"Element should be visible: {selector}"
-            raise AssertionError(msg)
+        visible = self.is_visible(selector, timeout=timeout)
+        msg = message or f"Element should be visible: {selector}"
+        assert visible, msg
 
     def assert_hidden(self, selector: SelectorLike,
                       message: Optional[str] = None,
                       timeout: Optional[int] = None) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.resolve(selector)
-        try:
-            locator.wait_for(state="hidden", timeout=timeout)
-        except PlaywrightTimeoutError:
-            # 若超时且元素可见，则断言失败
-            if locator.is_visible():
-                msg = message or f"Element should be hidden: {selector}"
-                raise AssertionError(msg)
+        visible = self.is_visible(selector, timeout=timeout)
+        msg = message or f"Element should be hidden: {selector}"
+        assert not visible, msg
 
     def assert_text(self, selector: SelectorLike,
                     expected: str,
                     exact: bool = False,
                     message: Optional[str] = None,
-                    timeout: Optional[int] = None) -> None:
-        actual = self.text(selector, timeout=timeout)
+                    timeout: Optional[int] = None,
+                    **kwargs) -> None:
+        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        actual = self.text(selector, timeout=timeout, **kwargs)
         if exact:
             msg = message or f"Text should be exactly '{expected}', got '{actual}'"
             assert actual == expected, msg
@@ -375,8 +391,10 @@ class AssertionMixin:
                          name: str,
                          expected: str,
                          message: Optional[str] = None,
-                         timeout: Optional[int] = None) -> None:
-        actual = self.attribute(selector, name, timeout=timeout)
+                         timeout: Optional[int] = None,
+                         **kwargs) -> None:
+        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        actual = self.attribute(selector, name, timeout=timeout, **kwargs)
         msg = message or f"Attribute '{name}' should be '{expected}', got '{actual}'"
         assert actual == expected, msg
 
@@ -384,9 +402,11 @@ class AssertionMixin:
 class WaitMixin:
     """等待相关功能"""
 
-    def wait_for_url(self, url: Union[str, Callable[[str], bool]],
-                     timeout: Optional[int] = None) -> None:
-        """等待 URL 匹配（支持字符串或函数）"""
+    def wait_for_url(self, url: Union[str, Pattern], timeout: Optional[int] = None) -> None:
+        """
+        等待 URL 匹配（支持字符串或正则表达式）
+        注意：不支持 Callable，如需复杂匹配请使用 wait_for_function。
+        """
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         self.page.wait_for_url(url, timeout=timeout)
 
@@ -406,12 +426,16 @@ class WaitMixin:
 
 
 class FrameMixin:
-    """Frame 处理"""
+    """Frame 处理 - 支持上下文自动切换"""
 
     @contextmanager
     def frame_context(self, frame_name: Optional[str] = None,
-                      frame_url: Optional[str] = None) -> Generator[Frame, None, None]:
-        """切换到指定 Frame 的上下文管理器（无需切换回主页面，直接返回 frame）"""
+                      frame_url: Optional[str] = None) -> Generator[None, None, None]:
+        """
+        切换到指定 Frame 的上下文管理器。
+        在此上下文中，self.page 会临时替换为 Frame 对象，所有操作将在该 Frame 内执行。
+        退出后自动恢复原 Page。
+        """
         if frame_name:
             frame = self.page.frame(name=frame_name)
         elif frame_url:
@@ -420,41 +444,34 @@ class FrameMixin:
             raise ValueError("Either frame_name or frame_url must be provided")
         if not frame:
             raise FrameNotFoundError(f"Frame not found: {frame_name or frame_url}")
-        yield frame
+        original_page = self.page
+        self.page = frame  # 临时替换为 Frame
+        try:
+            yield
+        finally:
+            self.page = original_page  # 恢复
 
 
 class NetworkMixin:
     """网络请求与下载"""
 
     def get_api_response(
-        self,
-        url_matcher: Union[str, re.Pattern, Callable[[str], bool]],
-        trigger_action: Callable[..., Any],
-        *args: Any,
-        timeout: Optional[float] = None,
-        description: str = "unknown action",
-        **kwargs: Any,
+            self,
+            url_matcher: Union[str, Pattern, Callable[[str], bool]],
+            trigger_action: Callable[..., Any],
+            *args: Any,
+            timeout: Optional[float] = None,
+            description: str = "unknown action",
+            **kwargs: Any,
     ) -> Response:
         """
         执行触发操作并等待匹配的网络响应。
-
-        :param url_matcher: URL 匹配器（字符串包含匹配，正则表达式或谓词函数）
-        :param trigger_action: 触发请求的可调用对象（如 self.click）
-        :param args: 传递给 trigger_action 的位置参数
-        :param kwargs: 传递给 trigger_action 的关键字参数
-        :param timeout: 等待响应的超时时间（毫秒），默认使用 self.DEFAULT_TIMEOUT
-        :param description: 操作描述，用于日志
-        :return: 匹配到的 Response 对象
-        :raises PlaywrightTimeoutError: 等待响应超时
-        :raises Exception: 触发动作执行时抛出的任何异常
         """
         timeout = timeout or self.DEFAULT_TIMEOUT
-
-        logger.info(
-            "[API Wait] Waiting for response matching %s while performing: %s",
-            url_matcher, description
+        logger.debug(
+            "[API Wait] Waiting for response matching %s while performing: %s (args=%s, kwargs=%s)",
+            url_matcher, description, args, kwargs
         )
-
         try:
             with self.page.expect_response(url_matcher, timeout=timeout) as response_info:
                 trigger_action(*args, **kwargs)
@@ -464,10 +481,9 @@ class NetworkMixin:
                 description, e, exc_info=True
             )
             raise
-
         response = response_info.value
-        logger.info(
-            "[API Wait] Captured response for %s, status=%s",
+        logger.debug(
+            "[API Wait] Successfully captured response for %s, status=%s",
             url_matcher, response.status
         )
         return response
@@ -498,11 +514,15 @@ class NetworkMixin:
 
     def download_file(self, selector: SelectorLike,
                       wait_for: str = "visible",
-                      timeout: Optional[int] = None) -> str:
-        """下载文件并返回临时路径"""
+                      timeout: Optional[int] = None,
+                      **kwargs) -> str:
+        """
+        下载文件并返回临时路径。
+        注意：该临时文件在测试结束后可能被 Playwright 自动删除，建议立即读取或使用 download_file_to()。
+        """
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         with self.page.expect_download(timeout=timeout) as download_info:
-            self.click(selector, wait_for=wait_for, timeout=timeout)
+            self.click(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         download = download_info.value
         logger.info(f"File downloaded: {download.path()}")
         return download.path()
@@ -510,11 +530,12 @@ class NetworkMixin:
     def download_file_to(self, selector: SelectorLike,
                          target_path: str,
                          wait_for: str = "visible",
-                         timeout: Optional[int] = None) -> str:
+                         timeout: Optional[int] = None,
+                         **kwargs) -> str:
         """下载文件并保存到指定路径"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         with self.page.expect_download(timeout=timeout) as download_info:
-            self.click(selector, wait_for=wait_for, timeout=timeout)
+            self.click(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         download = download_info.value
         save_path = download.save_as(target_path)
         logger.info(f"File saved to: {save_path}")
@@ -541,6 +562,16 @@ class NetworkMixin:
         logger.info(f"Request completed with status: {response.status}")
         return response
 
+    def _add_params_to_url(self, url: str, params: Dict[str, Any]) -> str:
+        """安全地向 URL 添加查询参数（保留原有参数）"""
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        # 合并新参数（注意 values 是列表形式）
+        for key, value in params.items():
+            query[key] = [str(value)]
+        new_query = urlencode(query, doseq=True)
+        return urlunparse(parsed._replace(query=new_query))
+
     def post_json(self, url: str, data: Dict[str, Any],
                   headers: Optional[Dict[str, str]] = None,
                   timeout: Optional[int] = None) -> Dict[str, Any]:
@@ -561,21 +592,10 @@ class NetworkMixin:
                  params: Optional[Dict[str, Any]] = None,
                  headers: Optional[Dict[str, str]] = None,
                  timeout: Optional[int] = None) -> Dict[str, Any]:
-        """发送 GET 请求并返回 JSON，正确处理已有查询参数的 URL"""
         if not url.startswith(("http://", "https://")) and self.base_url:
             url = urljoin(self.base_url, url)
-
         if params:
-            # 解析现有 URL 结构，安全添加查询参数
-            parsed = urlparse(url)
-            existing_params = parse_qs(parsed.query)
-            # 合并参数（现有参数优先，不覆盖？通常新参数应覆盖，这里选择合并，新参数覆盖旧值）
-            for key, value in params.items():
-                existing_params[key] = [str(value)]  # 覆盖
-            new_query = urlencode(existing_params, doseq=True)
-            # 重建 URL
-            url = urlunparse(parsed._replace(query=new_query))
-
+            url = self._add_params_to_url(url, params)  # 安全合并参数
         response = self.send_request("GET", url, headers=headers, timeout=timeout)
         if response.status < 200 or response.status >= 300:
             logger.error(f"GET request failed with status {response.status}: {response.text()}")
@@ -588,37 +608,46 @@ class NetworkMixin:
 
 
 class DialogMixin:
-    """弹窗处理（注意：对话框必须在触发操作后立即处理）"""
+    """弹窗处理"""
 
-    def wait_for_dialog(self, timeout: Optional[int] = None) -> Any:
-        """等待对话框出现并返回对话框对象（需在触发对话框的操作之后调用）"""
+    @contextmanager
+    def expect_dialog(self, timeout: Optional[int] = None) -> Generator[Any, None, None]:
+        """
+        等待对话框出现的上下文管理器。
+        用法：
+            with page.expect_dialog() as dialog_info:
+                page.click_trigger()
+            dialog = dialog_info.value
+            dialog.accept()
+        """
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        dialog = self.page.wait_for_event("dialog", timeout=timeout)
-        logger.info(f"Dialog appeared: {dialog.message}")
-        return dialog
+        with self.page.expect_event("dialog", timeout=timeout) as dialog_info:
+            yield dialog_info
 
     def accept_dialog(self, timeout: Optional[int] = None) -> None:
-        """接受当前对话框（需在触发对话框后调用）"""
-        dialog = self.wait_for_dialog(timeout=timeout)
+        """接受对话框（需在触发对话框后调用）"""
+        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
         logger.info(f"Accepting dialog with message: {dialog.message}")
         dialog.accept()
 
     def dismiss_dialog(self, timeout: Optional[int] = None) -> None:
-        """取消当前对话框（需在触发对话框后调用）"""
-        dialog = self.wait_for_dialog(timeout=timeout)
+        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
         logger.info(f"Dismissing dialog with message: {dialog.message}")
         dialog.dismiss()
 
     def get_dialog_message(self, timeout: Optional[int] = None) -> str:
-        """获取对话框消息（不自动关闭）"""
-        dialog = self.wait_for_dialog(timeout=timeout)
+        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
         message = dialog.message
         logger.info(f"Got dialog message: {message}")
         return message
 
     def handle_dialog(self, accept: bool = True, timeout: Optional[int] = None) -> str:
-        """处理对话框并返回消息（自动接受或取消）"""
-        dialog = self.wait_for_dialog(timeout=timeout)
+        """处理对话框并返回消息"""
+        timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
+        dialog = self.page.wait_for_event("dialog", timeout=timeout)
         message = dialog.message
         if accept:
             logger.info(f"Accepting dialog with message: {message}")
@@ -634,9 +663,10 @@ class ScrollMixin:
 
     def scroll_to(self, selector: SelectorLike,
                   wait_for: str = "visible",
-                  timeout: Optional[int] = None) -> None:
+                  timeout: Optional[int] = None,
+                  **kwargs) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
-        locator = self.find(selector, wait_for=wait_for, timeout=timeout)
+        locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         locator.scroll_into_view_if_needed(timeout=timeout)
 
     def scroll_by(self, x: int = 0, y: int = 0) -> None:
@@ -663,14 +693,12 @@ class ScreenshotMixin:
             return self.page.screenshot(path=path, full_page=full_page, **kwargs)
 
     def screenshot_on_failure(self, name: str = "failure", full_page: bool = True) -> None:
-        """失败时截图（目录从配置读取，默认为 screenshots/），使用 UUID 避免冲突"""
+        """失败时截图（目录从配置读取，默认为 screenshots/）"""
         try:
             screenshot_dir = getattr(settings, "SCREENSHOT_DIR", "screenshots")
             os.makedirs(screenshot_dir, exist_ok=True)
-            # 使用 UUID + 时间戳确保唯一性
-            unique_id = uuid4().hex[:8]
             timestamp = int(time.time() * 1000)
-            path = os.path.join(screenshot_dir, f"{name}_{timestamp}_{unique_id}.png")
+            path = os.path.join(screenshot_dir, f"{name}_{timestamp}.png")
             self.screenshot(path=path, full_page=full_page)
             logger.info(f"Screenshot saved: {path}")
         except Exception as e:
@@ -681,6 +709,9 @@ class ScreenshotMixin:
         try:
             yield
         except Exception as e:
+            # 排除系统级异常，避免被错误捕获
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                raise
             logger.error(f"{name} failed: {e}")
             self.screenshot_on_failure(name=name)
             raise
@@ -758,7 +789,8 @@ class ExpectMixin:
         else:
             self.expect(selector).to_be_checked()
 
-    def expect_text(self, selector: SelectorLike, expected: str, exact: bool = False, message: Optional[str] = None) -> None:
+    def expect_text(self, selector: SelectorLike, expected: str, exact: bool = False,
+                    message: Optional[str] = None) -> None:
         """断言元素文本包含或精确匹配"""
         locator = self.resolve(selector)
         if exact:
@@ -846,8 +878,7 @@ class BasePage(
         """
         self.page = page
         self.base_url = base_url or getattr(settings, "BASE_URL", None)
-        # 若 ScreenshotHelper 有用武之地可后续集成，当前未使用则注释或删除
-        # self.screenshot_helper = ScreenshotHelper(page)
+        # 移除了未使用的 self.screenshot_helper
 
         # 页面元数据
         self._page_name = self.__class__.__name__
@@ -859,22 +890,21 @@ class BasePage(
 
     # ----- 控制台日志监听（可选）-----
     def start_console_listener(self) -> None:
-        """开始监听控制台日志（避免重复添加监听器）"""
-        if self._console_handler is not None:
-            logger.warning("Console listener already started, stopping previous one first.")
-            self.stop_console_listener()
+        """开始监听控制台日志"""
+
         def handle_console(msg):
             self._console_logs.append(msg.text())
+
         self._console_handler = handle_console
         self.page.on("console", self._console_handler)
-        logger.info("Console listener started")
+        logger.debug("Console listener started")
 
     def stop_console_listener(self) -> None:
         """停止监听控制台日志"""
         if self._console_handler:
             self.page.remove_listener("console", self._console_handler)
             self._console_handler = None
-            logger.info("Console listener stopped")
+            logger.debug("Console listener stopped")
 
     def console_logs(self) -> List[str]:
         """获取控制台日志（需先启动监听）"""

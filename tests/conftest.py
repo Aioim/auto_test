@@ -20,7 +20,7 @@ from data.yaml_cases_loader import InvalidYamlFormatError, load_yaml_file
 from logger import logger
 
 # ==================== 常量 ====================
-TEST_DATA_DIR = Path(getattr(settings, "test_data_dir", PROJECT_ROOT / "test_data/test_cases/"))
+TEST_DATA_DIR = Path(getattr(settings, "test_data_dir", PROJECT_ROOT / "test_data/test_cases/")).resolve()
 
 
 # ==================== 命令行选项 ====================
@@ -43,6 +43,7 @@ def pytest_collection_modifyitems(config, items):
             allowed_envs = env_marker.args
             if not allowed_envs:
                 continue
+            # 处理 @pytest.mark.env(["alpha", "beta"]) 这种写法
             if len(allowed_envs) == 1 and isinstance(allowed_envs[0], (list, tuple)):
                 allowed_envs = allowed_envs[0]
             if current_env not in allowed_envs:
@@ -53,15 +54,18 @@ def pytest_collection_modifyitems(config, items):
 # ==================== YAML 数据驱动公共钩子 ====================
 @lru_cache(maxsize=128)
 def _cached_load_yaml(file_path_str: str) -> Dict[str, List[Dict[str, Any]]]:
-    file_path = Path(file_path_str)
+    # 规范化路径后再缓存，避免符号链接/相对路径导致的重复加载
+    file_path = Path(file_path_str).resolve()
     if not file_path.exists():
         raise FileNotFoundError(f"YAML文件不存在: {file_path}")
     return load_yaml_file(file_path)
 
 
 def _extract_yaml_param_names(metafunc, first_case: Dict[str, Any]) -> List[str]:
+    """提取测试函数参数名与 YAML 字段的交集，并过滤掉下划线开头的内部字段"""
     yaml_fields = set(first_case.keys()) if first_case else set()
     param_names = [p for p in metafunc.fixturenames if p in yaml_fields]
+
     if not param_names and yaml_fields:
         all_params = set(metafunc.fixturenames)
         _raise_usage_error(
@@ -71,17 +75,45 @@ def _extract_yaml_param_names(metafunc, first_case: Dict[str, Any]) -> List[str]
             f"  测试参数: {sorted(all_params)}\n"
             f"  要求: 测试函数参数名必须与YAML字段名完全一致"
         )
-    unused_fields = yaml_fields - set(param_names)
+
+    # 警告未使用的字段，但以下划线开头的字段（如 _comment）视为注释字段，忽略警告
+    unused_fields = {
+        f for f in yaml_fields - set(param_names)
+        if not f.startswith("_")
+    }
     if unused_fields:
         logger.warning(f"[YAML数据] 以下YAML字段未被测试函数使用: {sorted(unused_fields)}")
+
     return param_names
 
 
 def _mark_test_skip_due_to_no_cases(metafunc, reason: str = "No valid YAML test cases found") -> None:
-    """标记测试为跳过，并创建一个虚拟参数化以避免 pytest 因缺少参数而失败"""
+    """
+    标记测试为跳过，并为所有 fixture 参数生成占位参数化，
+    避免 pytest 因缺少参数而报错。
+    """
     metafunc.definition.add_marker(pytest.mark.skip(reason=reason))
-    if "request" in metafunc.fixturenames:
-        metafunc.parametrize("request", [pytest.param(None)], indirect=True)
+
+    # 关键修复：为所有 fixture 参数生成一个占位参数化，确保 pytest 不会因为参数未参数化而失败
+    if metafunc.fixturenames:
+        dummy_values = [None] * len(metafunc.fixturenames)
+        metafunc.parametrize(",".join(metafunc.fixturenames), [dummy_values])
+
+
+def _check_path_traversal(base_dir: Path, file_name: str) -> Path:
+    """
+    检查文件路径是否在允许的基础目录内，防止路径遍历攻击。
+    返回规范化的绝对路径。
+    """
+    # 先拼接再解析，得到真实路径
+    target_path = (base_dir / file_name).resolve()
+    # 确保解析后的路径仍在基础目录内
+    if not str(target_path).startswith(str(base_dir)):
+        raise ValueError(
+            f"非法的文件路径 (路径遍历尝试): '{file_name}'。"
+            f"所有测试数据必须位于 {base_dir} 内。"
+        )
+    return target_path
 
 
 def pytest_generate_tests(metafunc):
@@ -109,7 +141,13 @@ def pytest_generate_tests(metafunc):
         )
         return
 
-    abs_file_path = TEST_DATA_DIR / file_name
+    # 路径遍历防护 + 规范化
+    try:
+        abs_file_path = _check_path_traversal(TEST_DATA_DIR, file_name)
+    except ValueError as e:
+        _raise_usage_error(metafunc, str(e))
+        return
+
     logger.debug(f"Loading YAML file: {abs_file_path}")
 
     if not abs_file_path.exists():
@@ -160,6 +198,7 @@ def pytest_generate_tests(metafunc):
             logger.warning(f"[YAML数据] 用例 {idx} 缺少字段 {missing}，已跳过")
             continue
 
+        # 生成用例 ID
         case_id = (
             str(case.get("id", "")) or
             str(case.get("name", "")) or

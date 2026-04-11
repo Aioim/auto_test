@@ -14,7 +14,7 @@ from filelock import FileLock
 from config import settings
 
 # 缓存目录（可从 settings 或环境变量获取）
-TOKEN_CACHE_DIR = Path(getattr(settings, "token_cache_dir", "output/.token_cache"))
+TOKEN_CACHE_DIR = Path(getattr(settings, "token_cache_dir", ".token_cache"))
 TOKEN_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 TOKEN_MAX_AGE = getattr(settings, "token_max_age", 3600)  # 默认 1 小时
 
@@ -55,7 +55,6 @@ def get_token(key: str, max_age: int = None) -> Optional[str]:
                 return None
             return data.get("token")
         except (json.JSONDecodeError, KeyError, OSError):
-            # 缓存文件损坏，忽略并返回 None
             return None
 
 
@@ -74,7 +73,6 @@ def save_token(token: str, key: str) -> None:
             with open(cache_file, 'w') as f:
                 json.dump({"token": token, "timestamp": time.time()}, f)
         except OSError as e:
-            # 记录警告但不抛出异常，避免影响测试
             print(f"Warning: Failed to save token for {key}: {e}")
 
 
@@ -118,4 +116,4 @@ class TokenCache:
 # 默认实例（保持与原有 login_cache 模块接口一致）
 default_cache = TokenCache()
 
-# 为了方便直接导入模块函数，已经在模块顶层定义了 get_token, save_token, clear_token, clear_all
+# 为了直接导入模块函数，已经在模块顶层定义了 get_token, save_token, clear_token, clear_all

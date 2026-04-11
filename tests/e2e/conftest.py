@@ -8,9 +8,10 @@ E2E 测试专用 fixtures（基于 Playwright）
 - logged_in_page
 - multi_users_pages
 """
-import pytest
-from typing import Dict, Optional, Any, Generator
+import os
+from typing import Any, Dict, Generator, Optional
 
+import pytest
 from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
 
 from config import settings
@@ -24,6 +25,14 @@ from core.cache_utils import (
 )
 from logger import logger
 from pages.components.login_page import login_page
+from security import decrypt_env_key
+
+# 修正 geolocation 配置来源
+CONTEXT_KWARGS = {
+    "viewport": getattr(settings.browser, "viewport", {"width": 1920, "height": 1080}),
+    "permissions": getattr(settings.browser, "permissions", ["geolocation", "notifications", "clipboard-read"]),
+    "geolocation": getattr(settings.browser, "geolocation", {"latitude": 31.2304, "longitude": 121.4737}),
+}
 
 
 # ==================== Playwright 基础 fixtures ====================
@@ -48,14 +57,13 @@ def browser(playwright):
 @pytest.fixture(scope="function")
 def context(browser: Browser) -> Generator[BrowserContext, Any, None]:
     """创建浏览器上下文（函数级别，隔离 cookies/storage）"""
-    viewport = getattr(settings.browser, "viewport", {"width": 1920, "height": 1080})
-    context = browser.new_context(viewport=viewport)
+    context = browser.new_context(**CONTEXT_KWARGS)
     yield context
     context.close()
 
 
 @pytest.fixture(scope="function")
-def page(context: BrowserContext) -> Page:
+def page(context: BrowserContext) -> Generator[Page, Any, None]:
     """创建页面对象"""
     page = context.new_page()
     page.set_default_timeout(settings.timeouts.page_load)
@@ -75,21 +83,21 @@ def logged_in_page(browser: Browser, request) -> Generator[Page, Any, None]:
         username = request.param.get("username")
         password = request.param.get("password")
     else:
-        username = getattr(settings, "TEST_USERNAME", "")
-        password = getattr(settings, "TEST_PASSWORD", "")
+        username = os.getenv("USERNAME")
+        password = decrypt_env_key("PASSWORD")
 
     if not username or not password:
         pytest.skip("缺少用户名或密码")
 
-    base_url = getattr(settings, "BASE_URL", None)
+    base_url = getattr(settings, "base_url", None)
     if not base_url:
-        pytest.skip("settings 中未配置 BASE_URL")
+        pytest.skip("settings 中未配置 base_url")
 
     storage_path = get_storage_state_path(username)
 
     # 尝试从缓存恢复
     if storage_path and is_storage_state_valid(storage_path, browser, base_url):
-        context = browser.new_context(storage_state=str(storage_path))
+        context = browser.new_context(storage_state=str(storage_path), **CONTEXT_KWARGS)
         page = context.new_page()
         page.set_default_timeout(settings.timeouts.page_load)
         logger.info(f"从缓存恢复登录态: {storage_path}")
@@ -106,7 +114,7 @@ def logged_in_page(browser: Browser, request) -> Generator[Page, Any, None]:
 
     # 实时登录
     logger.info(f"缓存无效，实时登录: {username}")
-    context = browser.new_context()
+    context = browser.new_context(**CONTEXT_KWARGS)
     page = context.new_page()
     page.set_default_timeout(settings.timeouts.page_load)
     try:
@@ -122,7 +130,7 @@ def logged_in_page(browser: Browser, request) -> Generator[Page, Any, None]:
 
 # ==================== 多角色页面 fixture ====================
 @pytest.fixture(scope="function")
-def multi_users_pages(browser: Browser, request) -> Generator[dict[Any, Any], Any, None]:
+def multi_users_pages(browser: Browser, request) -> Generator[Dict[str, Page], Any, None]:
     """
     为多个角色创建独立的已登录页面对象。
     支持两种输入方式（通过 request.param）：
@@ -131,7 +139,7 @@ def multi_users_pages(browser: Browser, request) -> Generator[dict[Any, Any], An
     """
     base_url = getattr(settings, "base_url", None)
     if not base_url:
-        pytest.skip("settings 中未配置 BASE_URL")
+        pytest.skip("settings 中未配置 base_url")
 
     param = request.param if hasattr(request, "param") else {}
     multi_users = param.get("multi_users")
@@ -143,50 +151,53 @@ def multi_users_pages(browser: Browser, request) -> Generator[dict[Any, Any], An
     if not multi_users:
         pytest.skip("multi_users_pages 需要 multi_users 或 roles 参数")
 
-    contexts = {}
-    pages = {}
-    failed = []
+    contexts: Dict[str, BrowserContext] = {}
+    pages: Dict[str, Page] = {}
+    failed: list[str] = []
 
-    for role, creds in multi_users.items():
-        username = creds.get("username")
-        password = creds.get("password")
-        if not username or not password:
-            failed.append(f"{role}: 缺少用户名或密码")
-            continue
-
-        storage_path = get_storage_state_path(username)
-        context = None
-        try:
-            if storage_path and is_storage_state_valid(storage_path, browser, base_url):
-                context = browser.new_context(storage_state=str(storage_path))
-                page = context.new_page()
-
-                logger.info(f"角色 '{role}' 从缓存恢复登录态")
-            elif LOGIN_FALLBACK_ENABLED:
-                logger.info(f"角色 '{role}' 缓存无效，实时登录")
-                context = browser.new_context()
-                page = context.new_page()
-                login_page(page, username, password)
-                wait_for_login_success(page)
-                save_storage_state(page, username)
-                logger.info(f"角色 '{role}' 实时登录成功并保存缓存")
-            else:
-                failed.append(f"{role}: 缓存无效且 fallback 禁用")
+    try:
+        for role, creds in multi_users.items():
+            username = creds.get("username")
+            password = creds.get("password")
+            if not username or not password:
+                failed.append(f"{role}: 缺少用户名或密码")
                 continue
-            page.set_default_timeout(settings.timeouts.page_load)
 
-            contexts[role] = context
-            pages[role] = page
-        except Exception as e:
-            logger.error(f"角色 '{role}' 登录失败: {e}")
-            failed.append(f"{role} ({username}) - {e}")
-            if context:
-                context.close()
+            storage_path = get_storage_state_path(username)
+            context: Optional[BrowserContext] = None
+            try:
+                if storage_path and is_storage_state_valid(storage_path, browser, base_url):
+                    context = browser.new_context(storage_state=str(storage_path), **CONTEXT_KWARGS)
+                    page = context.new_page()
+                    logger.info(f"角色 '{role}' 从缓存恢复登录态")
+                elif LOGIN_FALLBACK_ENABLED:
+                    logger.info(f"角色 '{role}' 缓存无效，实时登录")
+                    context = browser.new_context(**CONTEXT_KWARGS)
+                    page = context.new_page()
+                    login_page(page, username, password)
+                    wait_for_login_success(page)
+                    save_storage_state(page, username)
+                    logger.info(f"角色 '{role}' 实时登录成功并保存缓存")
+                else:
+                    failed.append(f"{role}: 缓存无效且 fallback 禁用")
+                    continue
 
-    if failed:
-        pytest.fail(f"以下角色登录失败：\n" + "\n".join(failed))
+                page.set_default_timeout(settings.timeouts.page_load)
+                contexts[role] = context
+                pages[role] = page
 
-    yield pages
+            except Exception as e:
+                logger.error(f"角色 '{role}' 登录失败: {e}")
+                failed.append(f"{role} ({username}) - {e}")
+                if context:
+                    context.close()
 
-    for ctx in contexts.values():
-        ctx.close()
+        if failed:
+            pytest.fail(f"以下角色登录失败：\n" + "\n".join(failed))
+
+        yield pages
+
+    finally:
+        # 确保所有已创建的上下文都被关闭
+        for ctx in contexts.values():
+            ctx.close()

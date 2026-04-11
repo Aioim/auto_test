@@ -5,6 +5,7 @@ import json
 import re
 import time
 from typing import Optional, Dict, Any, List, Union
+
 import allure
 import backoff
 import requests
@@ -103,12 +104,11 @@ class APIClient:
             response_time = time.time() - start_time
             logger.info(f"Response status: {response.status_code} (耗时: {response_time:.2f}s)")
 
-            # 智能过滤响应内容：JSON 则结构化过滤，否则纯文本过滤
+            # 智能过滤响应内容
             safe_response = self._filter_response_content(response)
-
             logger.debug(f"Response body (filtered): {safe_response}")
 
-            # Allure 附加请求信息
+            # Allure 附加信息
             allure.attach(
                 f"{method} {url}\nParams: {safe_params}\nHeaders: {headers or {} }",
                 name="Request",
@@ -138,7 +138,7 @@ class APIClient:
             raise
 
     def _filter_response_content(self, response: requests.Response) -> str:
-        """根据响应 Content-Type 智能过滤敏感信息，返回字符串表示"""
+        """根据响应 Content-Type 智能过滤敏感信息"""
         content_type = response.headers.get("Content-Type", "").lower()
         try:
             if "application/json" in content_type:
@@ -146,16 +146,15 @@ class APIClient:
                 filtered = self._filter_sensitive_info(json_data)
                 return json.dumps(filtered, ensure_ascii=False, indent=2)
             else:
-                # 非 JSON 响应，截取前 1000 字符过滤敏感词
                 raw_text = response.text[:1000]
                 return self._mask_sensitive_strings(raw_text)
         except Exception:
-            # 回退：截取原始文本
             raw_text = response.text[:500]
             return self._mask_sensitive_strings(raw_text)
 
-    def _mask_sensitive_strings(self, text: str) -> str:
-        """对纯文本字符串进行敏感关键词掩码，保留上下文"""
+    @staticmethod
+    def _mask_sensitive_strings(text: str) -> str:
+        """对纯文本字符串进行敏感关键词掩码"""
         sensitive_keys = ["password", "token", "secret", "key", "auth", "authorization"]
         pattern = r'(?i)("?(?:%s)"?\s*[:=]\s*"?)([^"\s&]+)' % "|".join(sensitive_keys)
         return re.sub(pattern, r'\1***', text)
@@ -177,7 +176,6 @@ class APIClient:
 
     @allure.step("验证响应状态码")
     def assert_status(self, response: requests.Response, expected: Union[int, List[int]]):
-        """断言状态码"""
         if isinstance(expected, list):
             assert response.status_code in expected, \
                 f"Expected status in {expected}, got {response.status_code}"
@@ -188,7 +186,6 @@ class APIClient:
 
     @allure.step("验证响应 JSON Schema")
     def assert_schema(self, response: requests.Response, schema: Dict):
-        """断言 JSON Schema"""
         try:
             validate(instance=response.json(), schema=schema)
             logger.info("Schema validation passed")
@@ -204,7 +201,6 @@ class APIClient:
 
     @allure.step("验证响应字段")
     def assert_field(self, response: requests.Response, field: str, expected: Any):
-        """断言响应字段值"""
         data = response.json()
         actual = self._get_nested_field(data, field)
         assert actual == expected, f"Field {field}: expected {expected}, got {actual}"
@@ -212,7 +208,6 @@ class APIClient:
 
     @allure.step("验证响应字段存在")
     def assert_field_exists(self, response: requests.Response, field: str):
-        """断言响应字段存在"""
         data = response.json()
         actual = self._get_nested_field(data, field)
         assert actual is not None, f"Field {field} not found in response"
@@ -220,7 +215,6 @@ class APIClient:
 
     @allure.step("验证响应字段包含")
     def assert_field_contains(self, response: requests.Response, field: str, expected: Any):
-        """断言响应字段包含指定值"""
         data = response.json()
         actual = self._get_nested_field(data, field)
         assert expected in str(actual), f"Field {field} does not contain {expected}"
@@ -228,7 +222,6 @@ class APIClient:
 
     @allure.step("验证响应时间")
     def assert_response_time(self, response: requests.Response, max_time: float):
-        """断言响应时间（使用 elapsed 时间）"""
         response_time = response.elapsed.total_seconds()
         assert response_time <= max_time, \
             f"Response time {response_time:.2f}s exceeds maximum {max_time}s"
@@ -241,28 +234,25 @@ class APIClient:
         return self
 
     def set_auth_header(self, header_value: str):
-        """设置自定义 Authorization 头（适用于非 Bearer 场景）"""
+        """设置自定义 Authorization 头"""
         self.session.headers.update({"Authorization": header_value})
         return self
 
     def set_header(self, key: str, value: str):
-        """设置请求头"""
         self.session.headers.update({key: value})
         return self
 
     def remove_header(self, key: str):
-        """移除请求头"""
         if key in self.session.headers:
             del self.session.headers[key]
         return self
 
     def close(self):
-        """关闭会话"""
         self.session.close()
         logger.info("API Client session closed")
 
     def _filter_sensitive_info(self, data: Any) -> Any:
-        """递归过滤敏感信息（字典、列表、字符串）"""
+        """递归过滤敏感信息"""
         sensitive_keys = {"password", "token", "secret", "key", "auth", "authorization"}
 
         if isinstance(data, dict):
@@ -273,12 +263,12 @@ class APIClient:
         elif isinstance(data, list):
             return [self._filter_sensitive_info(item) for item in data]
         elif isinstance(data, str):
-            # 对字符串内容不再做全替换，保留上下文（已在 _mask_sensitive_strings 中处理）
             return data
         else:
             return data
 
-    def _get_nested_field(self, data: Dict, field: str) -> Any:
+    @staticmethod
+    def _get_nested_field(data: Dict, field: str) -> Any:
         """获取嵌套字段值"""
         keys = field.split(".")
         result = data
@@ -288,33 +278,3 @@ class APIClient:
             else:
                 return None
         return result
-
-
-# ============================================================================
-# 使用示例
-# ============================================================================
-
-if __name__ == "__main__":
-    print("✅ API Client 模块加载成功")
-    print("📌 使用方法: APIClient(base_url='https://api.example.com')")
-    print("📌 支持的方法: get, post, put, patch, delete")
-    print("📌 断言方法: assert_status, assert_field, assert_schema, assert_response_time")
-    print("\n=== 使用示例 ===")
-    print("""
-# 基本使用示例
-from src.utils.api_client import APIClient
-
-# 创建 API 客户端（可使用上下文管理器）
-with APIClient(base_url="https://jsonplaceholder.typicode.com") as client:
-    # 发送 GET 请求
-    response = client.get("/todos/1")
-    client.assert_status(response, 200)
-    client.assert_field(response, "userId", 1)
-    client.assert_response_time(response, 2.0)
-
-    # 发送 POST 请求
-    new_data = {"title": "测试任务", "completed": False, "userId": 1}
-    response = client.post("/todos", json_data=new_data)
-    client.assert_status(response, 201)
-    client.assert_field(response, "title", "测试任务")
-""")
