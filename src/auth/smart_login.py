@@ -233,18 +233,6 @@ class SmartLogin:
                 logger.info(f"🔄 缓存不可用，执行实时登录：{self.username}")
                 self.login()
                 self.save_state()
-            else:
-                # 验证缓存恢复后的页面是否仍处于登录状态（可选）
-                self.page.goto(settings.base_url)
-                try:
-                    wait_for_login_success(self.page, timeout=DEFAULT_LOGIN_SUCCESS_TIMEOUT)
-                    logger.info("✅ 缓存登录状态验证通过")
-                except Exception:
-                    logger.warning("⚠️ 缓存恢复后登录状态失效，重新登录")
-                    self._close_context_safely()
-                    self._close_page_safely()
-                    self.login()
-                    self.save_state()
             return self.page
         except Exception as e:
             self.stop_browser()
