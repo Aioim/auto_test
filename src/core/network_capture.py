@@ -16,7 +16,7 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Set, Union, Pattern
 from playwright.sync_api import Page, Request, Response, TimeoutError as PlaywrightTimeoutError
 from logger import logger
-from core import attach_json
+from utils import attach_json
 
 
 class NetworkCapture:
@@ -58,7 +58,7 @@ class NetworkCapture:
             max_request_body_size: Optional[int] = 1024,
             binary_mime_types: Optional[Set[str]] = None,
             wait_timeout: int = 15000,
-            final_delay: float = 0.3,
+            final_delay: float = 0,
             auto_attach: bool = True,
             parse_json: bool = True,
             track_duplicates: bool = True,
@@ -409,7 +409,7 @@ class NetworkCapture:
             self,
             action: Callable[[], Any],
             timeout: Optional[int] = None,
-            wait_for_responses: Optional[Union[str, Pattern, List[Union[str, Pattern]]]] = None,
+            wait_for_responses: Optional[Union[str, Pattern, List[Union[str, Pattern]]]] = "*",
             additional_wait: Optional[Callable[[], None]] = None,
             ensure_response_body: bool = True,
             debug: bool = False
