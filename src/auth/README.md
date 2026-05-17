@@ -52,7 +52,7 @@ Auth 模块包含以下文件：
 
 **主要方法**：
 - `get_storage_state_path(username, env=None)`：生成 storage_state 缓存文件路径
-- `is_storage_state_valid(storage_path, browser, base_url)`：验证缓存文件是否有效
+- `is_storage_state_valid(storage_path)`：验证缓存文件是否有效（检查认证 cookie 是否过期）
 - `save_storage_state(page, username, env=None)`：保存当前页面的登录状态到缓存文件
 - `wait_for_login_success(page, timeout=None)`：等待页面登录成功
 - `load_env_by_name(env_name)`：根据环境名加载对应的 .env 文件
