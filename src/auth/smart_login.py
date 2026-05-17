@@ -9,6 +9,7 @@
 """
 
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional, Any, Tuple, List, Dict
 
@@ -17,7 +18,7 @@ from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright, 
 from config import settings, PROJECT_ROOT
 from pages.components.login_page import login_page
 from logger import logger
-from .cache_utils import (
+from core.cache_utils import (
     get_storage_state_path,
     is_storage_state_valid,
     save_storage_state,
@@ -71,13 +72,15 @@ class SmartLogin:
         # 浏览器上下文参数（从配置安全读取）
         self.context_options = self._build_context_options()
 
-    def _validate_config(self):
+    @staticmethod
+    def _validate_config():
         """校验配置项完整性，防止运行时属性缺失"""
         if not hasattr(settings, 'base_url') or not settings.base_url:
             raise AttributeError("settings.base_url 未配置，无法启动浏览器")
         # 可以继续添加其他必要配置校验
 
-    def _build_context_options(self) -> Dict[str, Any]:
+    @staticmethod
+    def _build_context_options() -> Dict[str, Any]:
         """安全构建浏览器上下文参数，提供合理默认值"""
         browser_cfg = getattr(settings, 'browser', None) or {}
         return {
@@ -167,7 +170,7 @@ class SmartLogin:
         if not self.is_browser_started:
             self.start_browser()
 
-        if is_storage_state_valid(cache_path, self.browser, settings.base_url):
+        if is_storage_state_valid(cache_path):
             try:
                 self.context = self.browser.new_context(
                     storage_state=str(cache_path),
@@ -184,7 +187,10 @@ class SmartLogin:
                 return False
         else:
             # 缓存无效，备份后删除
-            bak_path = cache_path.with_suffix(".json.bak")
+            time_now = datetime.now().strftime("%Y%m%d%H%M%S")
+            bak_path = cache_path.with_suffix(f".json.bak.{time_now}")
+            if bak_path.is_file():
+                raise "备份文件已存在"
             cache_path.rename(bak_path)
             logger.warning(f"⚠️ 缓存无效，已备份至 {bak_path}")
             return False

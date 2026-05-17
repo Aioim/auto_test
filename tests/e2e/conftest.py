@@ -96,7 +96,7 @@ def logged_in_page(browser: Browser, request) -> Generator[Page, Any, None]:
     storage_path = get_storage_state_path(username)
 
     # 尝试从缓存恢复
-    if storage_path and is_storage_state_valid(storage_path, browser, base_url):
+    if storage_path and is_storage_state_valid(storage_path):
         context = browser.new_context(storage_state=str(storage_path), **CONTEXT_KWARGS)
         page = context.new_page()
         page.set_default_timeout(settings.timeouts.page_load)
@@ -166,7 +166,7 @@ def multi_users_pages(browser: Browser, request) -> Generator[Dict[str, Page], A
             storage_path = get_storage_state_path(username)
             context: Optional[BrowserContext] = None
             try:
-                if storage_path and is_storage_state_valid(storage_path, browser, base_url):
+                if storage_path and is_storage_state_valid(storage_path):
                     context = browser.new_context(storage_state=str(storage_path), **CONTEXT_KWARGS)
                     page = context.new_page()
                     logger.info(f"角色 '{role}' 从缓存恢复登录态")

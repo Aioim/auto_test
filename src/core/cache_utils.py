@@ -17,12 +17,12 @@ from pathlib import Path
 from typing import Optional, Dict
 
 from filelock import FileLock
-from playwright.sync_api import Page, Browser
+from playwright.sync_api import Page
 from dotenv import load_dotenv
 
 from config import settings
 from logger import logger
-from security import decrypt_env_key
+from security import decrypt_env_key, SecureEnvLoader
 # ==================== 配置常量（优先从 settings 读取，提供默认值） ====================
 BROWSER_CACHE_DIR = Path(getattr(settings.browser, "cache_dir", ".browser_cache"))
 BROWSER_STATE_CACHE_ENABLED = getattr(settings, "browser_state_cache_enabled", True)
@@ -54,17 +54,13 @@ def get_storage_state_path(username: str, env: str = None) -> Optional[Path]:
 
 
 # ==================== 缓存有效性验证 ====================
-def is_storage_state_valid(storage_path: Path, browser: Browser, base_url: str) -> bool:
+def is_storage_state_valid(storage_path: Path) -> bool:
     """
-    验证缓存文件是否有效（仍处于登录状态）
-    
-    优先检查认证 cookie 是否过期，若不确定则回退到访问首页验证。
-    
+    验证缓存文件是否有效（检查认证 cookie 是否过期）
+
     Args:
         storage_path: 缓存文件路径
-        browser: Playwright Browser 实例
-        base_url: 应用基础 URL
-    
+
     Returns:
         缓存有效返回 True，否则 False
     """
@@ -73,44 +69,15 @@ def is_storage_state_valid(storage_path: Path, browser: Browser, base_url: str) 
     try:
         with open(storage_path, 'r') as f:
             state = json.load(f)
-        # 快速检查：是否存在有效的认证 cookie
         cookies = state.get('cookies', [])
         now = time.time()
-        valid_cookie = any(
+        return any(
             c.get('name') in AUTH_COOKIE_NAMES and
             c.get('expires', now + 1) > now
             for c in cookies
         )
-        if valid_cookie:
-            return True
-        # 快速检查未通过，回退到访问首页验证（开销较大但准确）
-        logger.debug(f"快速检查未通过，尝试访问首页验证缓存: {storage_path}")
-        context = browser.new_context(storage_state=str(storage_path))
-        page = context.new_page()
-        page.goto(base_url, timeout=5000)
-        # 使用统一的登录成功等待机制判断是否已登录
-        is_valid = _is_page_logged_in(page)
-        context.close()
-        return is_valid
     except Exception as e:
         logger.warning(f"缓存文件无效: {storage_path}, 错误: {e}")
-        return False
-
-
-def _is_page_logged_in(page: Page) -> bool:
-    """
-    判断当前页面是否已登录（不抛出异常）
-    优先使用 LOGIN_SUCCESS_SELECTOR，否则检查 URL 是否包含 login
-    """
-    try:
-        if LOGIN_SUCCESS_SELECTOR:
-            # 等待一小段时间，看是否能找到登录成功标志
-            page.wait_for_selector(LOGIN_SUCCESS_SELECTOR, timeout=3000)
-            return True
-        else:
-            # 检查 URL 是否包含 login 字样
-            return "login" not in page.url.lower()
-    except Exception:
         return False
 
 
@@ -212,13 +179,15 @@ def get_role_credentials(role: str, env: str = None) -> Dict[str, str]:
     username = os.getenv(user_key)
     password = os.getenv(pass_key)
     if username and password:
-        password = decrypt_env_key(pass_key)
+        if SecureEnvLoader.is_encrypted_value(password):
+            password = decrypt_env_key(pass_key)
         return {"username": username, "password": password}
     # 回退到单账号变量
     single_user = os.getenv(f"{prefix}_USERNAME")
     single_pass = os.getenv(f"{prefix}_PASSWORD")
     if single_user and single_pass:
-        single_pass = decrypt_env_key(f"{prefix}_PASSWORD")
+        if SecureEnvLoader.is_encrypted_value(single_pass):
+            single_pass = decrypt_env_key(f"{prefix}_PASSWORD")
         return {"username": single_user, "password": single_pass}
     raise ValueError(f"未找到角色 '{role}' 的环境变量配置: {user_key}/{pass_key}")
 
