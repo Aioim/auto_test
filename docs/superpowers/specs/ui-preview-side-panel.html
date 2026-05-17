@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=380, initial-scale=1.0">
+<title>Auto Test Locator — Side Panel 预览</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     Design System — Soft Slate Blue Dark
+     参考: Linear / Vercel / GitHub 现代工具暗色风格
+     底色柔和，不深黑，蓝色为主调
+     ============================================================ */
+  :root {
+    /* 背景层级 — 柔和暗蓝灰 */
+    --bg-root: #1C2338;
+    --bg-header: #1F283D;
+    --bg-card: #242D43;
+    --bg-card-alt: #283249;
+    --bg-hover: #2C364E;
+    --bg-active: #2A364F;
+    --bg-code: #171E2E;
+    --bg-input: #1B2335;
+
+    /* 前景文字 */
+    --fg-primary: #E8EDF4;
+    --fg-secondary: #C4CCD8;
+    --fg-muted: #929BA8;
+    --fg-dim: #6B7482;
+
+    /* 蓝色主调 */
+    --accent: #4B91F7;
+    --accent-hover: #5C9DF8;
+    --accent-strong: #3B7DE6;
+    --accent-glow: rgba(75, 145, 247, 0.15);
+    --accent-glow-strong: rgba(75, 145, 247, 0.25);
+
+    /* 功能色 */
+    --green: #3ECF8E;
+    --green-bg: rgba(62, 207, 142, 0.10);
+    --amber: #F5A623;
+    --amber-bg: rgba(245, 166, 35, 0.10);
+    --red: #F25959;
+    --red-bg: rgba(242, 89, 89, 0.10);
+
+    /* 边框 */
+    --border: #313B50;
+    --border-light: #293244;
+    --border-focus: #4B91F7;
+
+    /* 圆角 */
+    --radius-xs: 3px;
+    --radius-sm: 5px;
+    --radius-md: 7px;
+    --radius-lg: 9px;
+
+    /* 阴影 */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.35);
+    --shadow-blue: 0 0 0 1px rgba(75,145,247,0.12), 0 4px 16px rgba(75,145,247,0.08);
+
+    /* 间距 (4dp 基准) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+
+    /* 动效 */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --duration-fast: 120ms;
+    --duration-normal: 180ms;
+    --duration-slow: 250ms;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--fg-primary);
+    background: #151A28;
+    background-image:
+      radial-gradient(ellipse 70% 55% at 50% -15%, rgba(75,145,247,0.05) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 45% at 85% 90%, rgba(75,145,247,0.03) 0%, transparent 70%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ============================================================
+     Side Panel Container
+     ============================================================ */
+  .side-panel {
+    width: 384px;
+    min-height: 720px;
+    background: var(--bg-root);
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(49, 59, 80, 0.5),
+      0 2px 8px rgba(0,0,0,0.15),
+      0 16px 48px rgba(0,0,0,0.35);
+  }
+
+  /* ============================================================
+     Header
+     ============================================================ */
+  .header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-header);
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .header-logo {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #4B91F7 0%, #3B7DE6 100%);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(75,145,247,0.25);
+  }
+  .header-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg-primary);
+    letter-spacing: -0.01em;
+  }
+  .header-version {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--fg-dim);
+    background: var(--bg-card);
+    padding: 1px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+  }
+
+  .meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .meta-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .meta-label {
+    width: 32px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--fg-dim);
+    white-space: nowrap;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .meta-input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--fg-primary);
+    padding: 5px 10px;
+    font-size: 11.5px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    outline: none;
+    transition: all var(--duration-fast) var(--ease-out);
+  }
+  .meta-input:hover { border-color: var(--border); }
+  .meta-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(75,145,247,0.10);
+  }
+
+  /* ============================================================
+     Toolbar
+     ============================================================ */
+  .toolbar {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    background: rgba(31, 40, 61, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toolbar-actions {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 11px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: var(--bg-card);
+    color: var(--fg-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--duration-fast) var(--ease-out);
+    letter-spacing: -0.005em;
+  }
+  .btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+  }
+  .btn:active { transform: scale(0.975); }
+
+  .btn-accent {
+    background: var(--accent-glow);
+    border-color: rgba(75,145,247,0.2);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .btn-accent:hover {
+    background: rgba(75,145,247,0.12);
+    border-color: rgba(75,145,247,0.35);
+    box-shadow: 0 0 10px rgba(75,145,247,0.1);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--fg-muted);
+    padding: 6px 8px;
+  }
+  .btn-ghost:hover { background: var(--bg-hover); color: var(--fg-secondary); }
+
+  .btn-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .toolbar-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .filter-select {
+    width: 72px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: var(--bg-input);
+    color: var(--fg-secondary);
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+  .filter-select:hover { border-color: var(--border); }
+  .filter-select:focus { border-color: var(--border-focus); }
+  .filter-select option { background: var(--bg-card); color: var(--fg-primary); }
+
+  .filter-input {
+    flex: 1;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: var(--bg-input);
+    color: var(--fg-primary);
+    outline: none;
+    transition: all var(--duration-fast) var(--ease-out);
+  }
+  .filter-input:hover { border-color: var(--border); }
+  .filter-input::placeholder { color: var(--fg-dim); font-weight: 400; }
+  .filter-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(75,145,247,0.10);
+  }
+
+  /* ============================================================
+     Element Tree
+     ============================================================ */
+  .element-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .element-tree::-webkit-scrollbar { width: 5px; }
+  .element-tree::-webkit-scrollbar-track { background: transparent; }
+  .element-tree::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+  }
+  .element-tree::-webkit-scrollbar-thumb:hover { background: #3D4860; }
+
+  /* 分组容器 */
+  .group {
+    margin: 0 10px 4px;
+  }
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--duration-fast) var(--ease-out);
+  }
+  .group-header:hover { background: rgba(44, 54, 78, 0.5); }
+
+  .group-chevron {
+    width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-dim);
+    transition: transform 200ms var(--ease-out);
+  }
+  .group-chevron svg { width: 12px; height: 12px; }
+
+  .group-badge {
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .badge-form { background: rgba(75,145,247,0.12); color: var(--accent); }
+  .badge-nav { background: rgba(139,146,168,0.10); color: var(--fg-muted); }
+
+  .group-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg-secondary);
+    flex: 1;
+    letter-spacing: -0.005em;
+  }
+  .group-tag {
+    font-size: 10px;
+    color: var(--fg-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    background: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: 1px solid var(--border-light);
+  }
+
+  /* 元素列表缩进线 */
+  .group-items {
+    margin: 2px 0 2px 8px;
+    padding-left: 12px;
+    position: relative;
+  }
+  .group-items::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border-light);
+    border-radius: 1px;
+  }
+
+  /* 元素卡片 */
+  .element-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 10px;
+    margin: 2px 0;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    position: relative;
+    border: 1px solid transparent;
+  }
+  .element-card:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-light);
+  }
+
+  /* 左边框颜色指示 */
+  .element-card::before {
+    content: '';
+    position: absolute;
+    left: -1px; top: 6px; bottom: 6px;
+    width: 3px;
+    border-radius: 2px;
+    transition: opacity var(--duration-fast);
+  }
+  .element-card.status-unique::before { background: var(--green); }
+  .element-card.status-multi::before { background: var(--amber); }
+  .element-card.status-fallback::before { background: var(--red); }
+  .element-card.unchecked::before { opacity: 0.25; }
+
+  .element-card.unchecked {
+    opacity: 0.50;
+  }
+  .element-card.unchecked:hover { opacity: 0.70; }
+
+  /* 复选框 */
+  .checkbox {
+    width: 16px; height: 16px;
+    border-radius: var(--radius-xs);
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--duration-fast) var(--ease-out);
+    background: transparent;
+  }
+  .element-card:not(.unchecked) .checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 6px rgba(75,145,247,0.2);
+  }
+  .checkbox svg {
+    width: 10px; height: 10px;
+    color: #FFFFFF;
+    display: none;
+  }
+  .element-card:not(.unchecked) .checkbox svg { display: block; }
+
+  /* 元素信息 */
+  .element-info { flex: 1; min-width: 0; }
+  .element-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .element-icon {
+    font-size: 12px;
+    flex-shrink: 0;
+    opacity: 0.80;
+    line-height: 1;
+  }
+  .element-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-primary);
+    letter-spacing: -0.005em;
+  }
+
+  /* 策略标签 */
+  .strategies {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .strategy {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 1.5px 7px;
+    border-radius: var(--radius-xs);
+    display: inline-block;
+    align-self: flex-start;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+  .element-card.status-unique .strategy {
+    color: #5AE09E;
+    background: rgba(62,207,142,0.08);
+  }
+  .element-card.status-multi .strategy {
+    color: #F7B84E;
+    background: rgba(245,166,35,0.08);
+  }
+  .element-card.status-fallback .strategy {
+    color: #F57373;
+    background: rgba(242,89,89,0.08);
+  }
+  .element-card.unchecked .strategy { opacity: 0.6; }
+
+  /* 状态徽章 */
+  .status-badge {
+    font-size: 9px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+    letter-spacing: 0.01em;
+  }
+  .badge-unique { background: var(--green-bg); color: #5AE09E; }
+  .badge-multi { background: var(--amber-bg); color: #F7B84E; }
+  .badge-fallback { background: var(--red-bg); color: #F57373; }
+
+  /* ============================================================
+     Manual Add Entry
+     ============================================================ */
+  .manual-add {
+    margin: 8px 14px;
+    padding: 10px 16px;
+    border: 1.5px dashed #2E3A55;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: var(--fg-dim);
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-out);
+  }
+  .manual-add:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(75,145,247,0.04);
+    box-shadow: 0 0 20px rgba(75,145,247,0.06);
+  }
+  .manual-add-plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(75,145,247,0.12);
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    transition: all var(--duration-normal) var(--ease-out);
+  }
+  .manual-add:hover .manual-add-plus {
+    background: rgba(75,145,247,0.22);
+    transform: scale(1.08);
+  }
+
+  /* ============================================================
+     Method Preview
+     ============================================================ */
+  .method-preview {
+    margin: 0 14px 10px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+  }
+  .method-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 7px;
+  }
+  .method-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px rgba(75,145,247,0.4);
+  }
+  .method-preview-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .method-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg-secondary);
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .method-arrow {
+    color: var(--fg-dim);
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .method-name {
+    color: #6DABF7;
+    font-weight: 500;
+  }
+  .method-args { color: var(--fg-muted); }
+  .method-result { color: var(--fg-muted); font-size: 10.5px; }
+
+  /* ============================================================
+     Footer Actions
+     ============================================================ */
+  .footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    gap: 8px;
+    background: var(--bg-header);
+  }
+  .btn-footer {
+    flex: 1;
+    padding: 9px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    border-radius: var(--radius-md);
+    border: none;
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-out);
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-footer-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--fg-secondary);
+  }
+  .btn-footer-outline:hover {
+    background: var(--bg-hover);
+    border-color: #3D4860;
+  }
+  .btn-footer-primary {
+    background: linear-gradient(135deg, #4B91F7 0%, #3878E0 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(75,145,247,0.2), 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .btn-footer-primary:hover {
+    background: linear-gradient(135deg, #5C9DF8 0%, #4B8AF0 100%);
+    box-shadow: 0 4px 16px rgba(75,145,247,0.3), 0 1px 3px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-footer:active { transform: scale(0.97); }
+  .btn-footer-primary:active { transform: scale(0.97) translateY(0); }
+  .btn-icon-s { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* ============================================================
+     Empty State Hint
+     ============================================================ */
+  .empty-hint {
+    text-align: center;
+    padding: 20px 16px;
+    color: var(--fg-dim);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .empty-hint .icon-wrap {
+    width: 36px; height: 36px;
+    margin: 0 auto 10px;
+    border-radius: 50%;
+    background: rgba(75,145,247,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="side-panel">
+
+  <!-- =========================================================
+       Header
+       ========================================================= -->
+  <div class="header">
+    <div class="header-row">
+      <div class="header-logo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+      </div>
+      <span class="header-title">Auto Test Locator</span>
+      <span class="header-version">v0.1</span>
+    </div>
+    <div class="meta-row">
+      <div class="meta-field">
+        <span class="meta-label">页面</span>
+        <input class="meta-input" value="登录页" title="自动从 document.title 推断">
+      </div>
+      <div class="meta-field">
+        <span class="meta-label">类名</span>
+        <input class="meta-input" value="LoginPage" title="自动从 URL 路径推断">
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       Toolbar
+       ========================================================= -->
+  <div class="toolbar">
+    <div class="toolbar-actions">
+      <button class="btn btn-accent" title="重新扫描当前页面">
+        <svg class="btn-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 2.5a.5.5 0 0 1 1 0v4a.5.5 0 0 1-.5.5h-4a.5.5 0 0 1 0-1h3.2a5.5 5.5 0 1 0 1.8 3.5.5.5 0 1 1 1 .1 6.5 6.5 0 1 1-2.6-6.3l.1-.8Z"/></svg>
+        重新扫描
+      </button>
+      <button class="btn">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 12 15 20 6"/></svg>
+        全选
+      </button>
+      <button class="btn btn-ghost">取消</button>
+    </div>
+    <div class="toolbar-row">
+      <select class="filter-select">
+        <option>全部</option>
+        <option>按钮</option>
+        <option>输入框</option>
+        <option>链接</option>
+        <option>表单</option>
+      </select>
+      <input class="filter-input" type="text" placeholder="搜索元素…">
+    </div>
+  </div>
+
+  <!-- =========================================================
+       Element Tree
+       ========================================================= -->
+  <div class="element-tree">
+
+    <!-- 分组: 登录表单 -->
+    <div class="group">
+      <div class="group-header">
+        <span class="group-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+        <span class="group-badge badge-form">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+        </span>
+        <span class="group-name">登录表单</span>
+        <span class="group-tag">form#login-form</span>
+      </div>
+      <div class="group-items">
+
+        <!-- 用户名输入框 -->
+        <div class="element-card status-unique">
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="element-info">
+            <div class="element-name-row">
+              <span class="element-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h12"/></svg>
+              </span>
+              <span class="element-name">用户名输入框</span>
+              <span class="status-badge badge-unique">唯一匹配</span>
+            </div>
+            <div class="strategies">
+              <span class="strategy">get_by_label("用户名")</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 密码输入框 -->
+        <div class="element-card status-unique">
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="element-info">
+            <div class="element-name-row">
+              <span class="element-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h12"/></svg>
+              </span>
+              <span class="element-name">密码输入框</span>
+              <span class="status-badge badge-unique">唯一匹配</span>
+            </div>
+            <div class="strategies">
+              <span class="strategy">get_by_placeholder("密码")</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 登录按钮 -->
+        <div class="element-card status-multi">
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="element-info">
+            <div class="element-name-row">
+              <span class="element-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+              </span>
+              <span class="element-name">登录按钮</span>
+              <span class="status-badge badge-multi">2 个匹配</span>
+            </div>
+            <div class="strategies">
+              <span class="strategy">get_by_role(button, "登录")</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 忘记密码 -->
+        <div class="element-card status-unique unchecked">
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="element-info">
+            <div class="element-name-row">
+              <span class="element-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+              </span>
+              <span class="element-name">忘记密码</span>
+            </div>
+            <div class="strategies">
+              <span class="strategy">get_by_text("忘记密码")</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 分组: 导航栏 -->
+    <div class="group">
+      <div class="group-header">
+        <span class="group-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+        <span class="group-badge badge-nav">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </span>
+        <span class="group-name">导航栏</span>
+        <span class="group-tag">nav#header</span>
+      </div>
+      <div class="group-items">
+
+        <!-- 首页链接 -->
+        <div class="element-card status-unique">
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="element-info">
+            <div class="element-name-row">
+              <span class="element-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </span>
+              <span class="element-name">首页链接</span>
+              <span class="status-badge badge-unique">唯一匹配</span>
+            </div>
+            <div class="strategies">
+              <span class="strategy">get_by_role(link, "首页")</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 个人中心链接 -->
+        <div class="element-card status-unique">
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="element-info">
+            <div class="element-name-row">
+              <span class="element-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </span>
+              <span class="element-name">个人中心链接</span>
+              <span class="status-badge badge-unique">唯一匹配</span>
+            </div>
+            <div class="strategies">
+              <span class="strategy">get_by_role(link, "个人中心")</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 设置链接 - CSS兜底 -->
+        <div class="element-card status-fallback unchecked">
+          <div class="checkbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="element-info">
+            <div class="element-name-row">
+              <span class="element-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </span>
+              <span class="element-name">设置链接</span>
+              <span class="status-badge badge-fallback">CSS 兜底</span>
+            </div>
+            <div class="strategies">
+              <span class="strategy">css("a.settings-link")</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Manual Add -->
+    <div class="manual-add" title="在页面上点击元素进行手动采集">
+      <span class="manual-add-plus">+</span>
+      手动补充元素
+    </div>
+
+  </div>
+
+  <!-- =========================================================
+       Method Preview
+       ========================================================= -->
+  <div class="method-preview">
+    <div class="method-preview-header">
+      <span class="method-dot"></span>
+      <span class="method-preview-title">生成方法预览</span>
+    </div>
+    <div class="method-item">
+      <span class="method-name">login</span><span class="method-args">(username, password)</span>
+      <span class="method-arrow">→</span>
+      <span class="method-result">fill + click</span>
+    </div>
+    <div class="method-item">
+      <span class="method-name">goto_home</span><span class="method-args">()</span>
+      <span class="method-arrow">→</span>
+      <span class="method-result">click link</span>
+    </div>
+    <div class="method-item">
+      <span class="method-name">goto_profile</span><span class="method-args">()</span>
+      <span class="method-arrow">→</span>
+      <span class="method-result">click link</span>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       Footer
+       ========================================================= -->
+  <div class="footer">
+    <button class="btn-footer btn-footer-outline">
+      <svg class="btn-icon-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      预览
+    </button>
+    <button class="btn-footer btn-footer-primary">
+      <svg class="btn-icon-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      导出文件
+    </button>
+  </div>
+
+</div>
+
+</body>
+</html>
