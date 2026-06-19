@@ -1,4 +1,14 @@
 # 基础配置 (所有环境共享)
+project:
+  name: "code-graph-analyzer"
+  root: "."                     # 当前目录
+  version: "1.0.0"
+
+languages:
+  enabled:
+    - python
+
+
 timeouts:
   page_load: 30000    # 页面加载超时 (毫秒)
   element_wait: 10000 # 元素等待超时 (毫秒)

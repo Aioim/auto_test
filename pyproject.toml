@@ -47,6 +47,9 @@ dependencies = [
 dev = [
 ]
 
+[project.scripts]
+# code-graph entry point removed: cli/ package does not exist"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

@@ -14,6 +14,13 @@ from functools import wraps
 from contextlib import contextmanager
 from typing import Optional, Dict, Any, Callable, Tuple
 from urllib.parse import urlparse, parse_qs
+from typing import NamedTuple
+
+
+class ParsedURL(NamedTuple):
+    path: str
+    params: dict
+    full: str
 import os
 from datetime import datetime, timezone
 
@@ -93,20 +100,16 @@ class RequestLogger:
         duration_ms = kwargs.get('duration_ms', 0.0)
 
         parsed = self._parse_url(url)
-        status_marker = "✅" if 200 <= status_code < 300 else "❌"
+        status_marker = "[OK]" if 200 <= status_code < 300 else "[FAIL]"
 
         log_msg = f"{location_prefix}{status_marker} {method} {parsed.path} {status_code} ({duration_ms:.1f}ms)"
         self.logger.info(log_msg)
 
     @staticmethod
-    def _parse_url(url: str) -> Any:
+    def _parse_url(url: str) -> 'ParsedURL':
         parsed_url = urlparse(url)
         params = parse_qs(parsed_url.query) if parsed_url.query else {}
-        return type('ParsedURL', (), {
-            'path': parsed_url.path or '/',
-            'params': params,
-            'full': url
-        })()
+        return ParsedURL(parsed_url.path or '/', params, url)
 
     @staticmethod
     def _format_params(params: Dict, max_len: int = 80) -> str:
@@ -158,7 +161,7 @@ def log_performance(
                 duration_ms = (time.perf_counter() - start) * 1000
                 msg = f"{actual_module}.{func.__name__} {duration_ms:.2f}ms"
                 if mark_slow and duration_ms >= threshold_ms:
-                    msg += f" ⚠️ SLOW"
+                    msg += " [SLOW]"
                 try:
                     log.log(level, msg)
                 except Exception:
@@ -180,7 +183,7 @@ def log_exception(logger_param=None, exc: Optional[Exception] = None, context: s
         msg = f"Exception in {context}: {exc}" if context else str(exc)
         log.error("%s\nTraceback:\n%s", msg, tb)
     except Exception as e:
-        error_msg = f"⚠️  Error in log_exception: {e}"
+        error_msg = f"[ERROR] Error in log_exception: {e}"
         if not LogConfig.quiet:
             print(error_msg, file=sys.stderr)
 
@@ -228,13 +231,13 @@ def log_step(step_name: str, logger_param=None):
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            log.info("▶️ Step: %s", step_name)
+            log.info("[STEP] Step: %s", step_name)
             try:
                 result = func(*args, **kwargs)
-                log.info("✅ Completed: %s", step_name)
+                log.info("[OK] Completed: %s", step_name)
                 return result
             except Exception as e:
-                log.error("❌ Failed: %s | %s", step_name, e)
+                log.error("[FAIL] Failed: %s | %s", step_name, e)
                 raise
         return wrapper
     return decorator
@@ -258,7 +261,7 @@ def log_duration(step_name: str, logger_param=None, threshold_ms: float = 50.0):
         duration_ms = (time.perf_counter() - start) * 1000
         msg = f"END {step_name} {duration_ms:.2f}ms"
         if duration_ms >= threshold_ms:
-            msg += f" ⚠️ SLOW"
+            msg += " [SLOW]"
         try:
             log.info(msg)
         except Exception:

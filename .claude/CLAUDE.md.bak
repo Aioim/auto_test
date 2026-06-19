@@ -1,0 +1,65 @@
+# CLAUDE.md - Superpowers + Gstack + UI-UX-Pro-Max 三技能组合配置
+# 本文件作为 AI 开发的“宪法”，定义技能调用的优先级和裁决规则
+
+## 1. 技能裁决表（核心！）
+
+当 Claude Code 接收到任务时，严格按以下优先级匹配技能：
+
+| 任务类型 | 强制调用技能 | 职责说明 |
+|---------|-------------|---------|
+| 浏览器操作、页面验证、端到端测试 | **Gstack** (`/browse`, `/qa`) | 真实浏览器环境验证 |
+| 代码发布、PR 创建、部署流水线 | **Gstack** (`/ship`, `/canary`) | 自动化发布闭环 |
+| 需求头脑风暴、方案精炼 | **Superpowers** (`brainstorming`) | 强制先想后做 |
+| 编写实施计划、任务拆解 | **Superpowers** (`writing-plans`) | 拆解成可执行的小任务 |
+| 代码执行、TDD 红绿循环 | **Superpowers** (`executing-plans`, TDD) | 严格执行工程纪律 |
+| 单元测试编写与执行 | **Superpowers** (TDD) | 测试驱动开发 |
+| 代码审查 | **Superpowers** (`requesting-code-review`) | 独立审查通道 |
+| UI 设计、前端代码生成 | **UI-UX-Pro-Max** (`/ui-ux-pro-max`) | 调用设计知识库生成美观界面 |
+| 产品战略、需求合理性审查 | **Gstack** (`/office-hours`, `/plan-ceo-review`) | 产品/CEO 双重视角挑战 |
+| 技术架构、数据流转审查 | **Gstack** (`/plan-eng-review`) | 工程审查 |
+| 系统化调试 | **Superpowers** (`systematic-debugging`) | 先找根因再修复 |
+
+## 2. 工作流协作原则
+
+### 2.1 各司其职，果断移交
+- **Superpowers 管思考/质量/纪律**：brainstorming、writing-plans、TDD、code-review
+- **Gstack 管方向/验证/交付**：/office-hours、/qa、/ship
+- **UI-UX-Pro-Max 管设计/美观**：UI 设计、前端组件代码生成
+
+### 2.2 五大关键交接点（必须遵守）
+1. **需求澄清后**：Superpowers:brainstorming → Gstack:/plan-ceo-review（用产品视角挑战盲区）
+2. **计划拆解后**：Superpowers:writing-plans → Gstack:/plan-eng-review（审查数据流转/异常处理）
+3. **TDD 跑通后**：Superpowers:TDD 全绿 → Gstack:/qa（真实浏览器验证，发现单元测试覆盖不到的问题）
+4. **问题排查时**：Superpowers:debugging 定位代码 → Gstack:/investigate（查看真实 DOM/控制台报错）
+5. **发布前**：Superpowers:requesting-code-review → Gstack:/ship（自动发布流水线）
+
+### 2.3 证据驱动原则
+**“无验证证据的完成等于未完成”**。任何“任务完成”结论必须基于以下证据之一：
+- Superpowers 的测试日志（测试先失败→后通过）
+- Gstack:/qa 生成的多设备截图报告
+- 浏览器自动化输出（DOM 快照、控制台输出）
+
+禁止仅凭 Claude Code 的口头陈述就判定任务已完成。
+
+### 2.4 任务复杂度分流策略
+- **轻量级任务**（小 bug 修复/配置调整）：直接修改 → 看一眼效果 → 无需完整流程
+- **中量级任务**（新功能/明确重构）：brainstorming → 简短 plan → TDD → /qa 收尾
+- **重量级任务**（跨模块大改动/新架构）：走完整闭环流程，不省略任何环节
+
+## 3. UI-UX-Pro-Max 专用使用方式
+
+当需要进行 UI 设计或生成前端代码时：
+- 在提示词中明确要求 Claude 使用 `ui-ux-pro-max` 技能
+- 示例格式：
+- 使用 ui-ux-pro-max 帮我设计一个 B2B SaaS 产品的官网首页。
+- 风格：Glassmorphism + Clean，现代科技感
+- 目标：引导用户注册试用（主 CTA）、展示产品核心功能 
+- 技术栈：React + Tailwind
+- UI-UX-Pro-Max 会自动检索设计知识库并提供：样式说明、配色方案（含 Tailwind 写法）、字体搭配建议、完整 React 组件代码[reference:7]
+
+## 4. 禁止事项
+
+- ❌ 不要越俎代庖：Superpowers 不要直接执行浏览器操作（交给 Gstack）
+- ❌ 不要自我审查：代码审查必须新开 reviewer 上下文，不能由代码作者本人审查
+- ❌ 不要跳过 TDD：任何代码实现都必须先写测试
+- ❌ 不要绕过 /qa：单元测试通过了 ≠ 真实环境没问题

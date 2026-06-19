@@ -48,7 +48,7 @@ from playwright.sync_api import sync_playwright
 from config import settings
 from pages.components.login_page import login_page
 from logger import logger
-from auth.cache_utils import (
+from core.cache_utils import (
     load_env_by_name,
     get_all_accounts_from_env,
     save_storage_state,

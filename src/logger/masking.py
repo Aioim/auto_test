@@ -10,13 +10,11 @@ from config import settings
 
 LogConfig = settings.log
 
-
 class MaskingEngine:
     """高性能脱敏引擎"""
 
-    _SHORT_THRESHOLD = 100      # 短文本阈值，直接处理
-    _CACHE_THRESHOLD = 500      # 中长文本缓存阈值
-    _STREAM_CHUNK = 2000        # 流式处理块大小
+    _SHORT_THRESHOLD = 100
+    _CACHE_THRESHOLD = 500
 
     # 脱敏模式库
     _PATTERNS = {
@@ -94,9 +92,7 @@ class MaskingEngine:
         length = len(text)
         if length < MaskingEngine._SHORT_THRESHOLD:
             return MaskingEngine._direct_mask(text)
-        if length < MaskingEngine._CACHE_THRESHOLD:
-            return MaskingEngine._cached_mask(text)
-        return MaskingEngine._stream_mask(text)
+        return MaskingEngine._cached_mask(text)
 
     @staticmethod
     def _direct_mask(text: str) -> str:
@@ -107,14 +103,6 @@ class MaskingEngine:
                 if pattern.search(result):
                     result = pattern.sub(repl, result)
         return result
-
-    @staticmethod
-    def _stream_mask(text: str) -> str:
-        """分块处理长文本，避免内存峰值"""
-        chunk_size = MaskingEngine._STREAM_CHUNK
-        chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
-        return ''.join(MaskingEngine._direct_mask(chunk) for chunk in chunks)
-
 
 def mask_sensitive_data(message):
     """
@@ -129,7 +117,6 @@ def mask_sensitive_data(message):
     if isinstance(message, str):
         return MaskingEngine.mask(message)
     return message
-
 
 def mask_dict_values(data: dict, sensitive_keys: set = None) -> dict:
     """

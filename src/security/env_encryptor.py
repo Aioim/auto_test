@@ -122,7 +122,7 @@ def decrypt_env_key(env_var: str) -> str:
     warnings.warn(
         "'decrypt_env_key' is deprecated, use 'fetch_and_decrypt_env_var' instead.",
         DeprecationWarning,
-        stacklevel=2,
+        stacklevel=3,
     )
     return fetch_and_decrypt_env_var(env_var)
 

@@ -24,6 +24,7 @@ class LazyLogger:
                 # 导入依赖
                 from .handlers import HandlerFactory
                 from .formatters import SecurityFormatter, ColoredFormatter
+                from .filters import SensitiveDataFilter, SecurityAuditFilter
                 from config import settings
                 LogConfig = settings.log
 
@@ -43,7 +44,6 @@ class LazyLogger:
                 level = getattr(logging, (kwargs.get('log_level') or LogConfig.log_level).upper(), logging.INFO)
                 logger.setLevel(level)
                 logger.propagate = False
-                logger.parent = None
 
                 # 添加控制台处理器
                 if kwargs.get('log_to_console', True):
@@ -78,11 +78,15 @@ class LazyLogger:
                             "timed", filename, logging.DEBUG
                         ))
 
+                # 应用安全过滤器（脱敏 + 审计）
+                logger.addFilter(SensitiveDataFilter())
+                logger.addFilter(SecurityAuditFilter())
+
                 # 初始化横幅
                 if name == "automation" and not LogConfig.quiet:
                     logger.info("=" * 70)
-                    logger.info(f"✅ Secure Logger | Env: {settings.env} | Level: {logging.getLevelName(level)}")
-                    logger.info(f"⏰ UTC: {datetime.now(timezone.utc).isoformat()}")
+                    logger.info(f"[OK] Secure Logger | Env: {settings.env} | Level: {logging.getLevelName(level)}")
+                    logger.info(f"[TIME] UTC: {datetime.now(timezone.utc).isoformat()}")
                     logger.info("=" * 70)
 
                 _module_instances[name] = logger
@@ -100,4 +104,7 @@ class LazyLogger:
                             handler.close()
                         except Exception:
                             pass
+                # 从 logging 模块内部注册表中移除
+                if hasattr(logger, 'name'):
+                    logging.Logger.manager.loggerDict.pop(logger.name, None)
             _module_instances.clear()

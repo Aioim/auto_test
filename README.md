@@ -141,11 +141,7 @@ auto_test/
 │   └── test_screenshot_helper.py
 ├── .gitignore
 ├── README.md
-├── demo_dialog_effect.py  # 弹窗效果演示
-├── demo_dialog_handling.py # 弹窗处理演示
-├── pf_logger.py           # 日志演示
-├── pyproject.toml         # 项目配置（包含pytest配置）
-└── test_simple_dialog.py  # 简单弹窗测试
+└── pyproject.toml         # 项目配置（包含pytest配置）
 ```
 
 ## 核心模块

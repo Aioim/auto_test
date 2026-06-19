@@ -4,6 +4,7 @@
 提供通用的数据库连接和操作方法，支持MySQL、PostgreSQL、SQLite等常见数据库。
 """
 from __future__ import annotations
+import re
 from typing import Optional, Dict, Any, List, Tuple, Union
 from contextlib import contextmanager
 try:
@@ -40,6 +41,25 @@ class DatabaseHelper:
         'postgresql': 'postgresql+psycopg2',
         'sqlite': 'sqlite'
     }
+
+    # SQL 标识符白名单正则（仅允许字母、数字、下划线，必须以字母或下划线开头）
+    _IDENTIFIER_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
+    @staticmethod
+    def _validate_identifier(name: str, context: str = "identifier") -> str:
+        """验证 SQL 标识符（表名、列名）安全，防止注入"""
+        if not name or not DatabaseHelper._IDENTIFIER_RE.match(name):
+            raise ValueError(
+                f"Invalid SQL {context}: '{name}'. "
+                f"Only alphanumeric characters and underscores are allowed."
+            )
+        return name
+
+    @classmethod
+    def _validate_identifiers(cls, names: list, context: str = "identifiers") -> None:
+        """批量验证 SQL 标识符"""
+        for name in names:
+            cls._validate_identifier(name, context)
     
     def __init__(self):
         """
@@ -147,12 +167,10 @@ class DatabaseHelper:
         if key not in self._engines:
             # 创建新的引擎
             logger.debug(f"Creating new database engine for: {key}")
-            self._engines[key] = create_engine(
-                conn_str,
-                pool_pre_ping=True,
-                pool_size=10,
-                max_overflow=20
-            )
+            engine_kwargs = {"pool_pre_ping": True}
+            if db_type != "sqlite":
+                engine_kwargs.update({"pool_size": 10, "max_overflow": 20})
+            self._engines[key] = create_engine(conn_str, **engine_kwargs)
         
         return self._engines[key]
     
@@ -253,11 +271,14 @@ class DatabaseHelper:
         Returns:
             int: 影响的行数
         """
+        # 验证标识符
+        self._validate_identifier(table, "table name")
+        self._validate_identifiers(list(data.keys()), "column name")
         # 生成插入语句
         columns = ', '.join(data.keys())
         placeholders = ', '.join([f':{k}' for k in data.keys()])
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-        
+
         with self.get_session(
             db_type, host, port, database, user, password, **kwargs
         ) as session:
@@ -267,38 +288,41 @@ class DatabaseHelper:
             except SQLAlchemyError as e:
                 logger.error(f"Insert data error: {e}")
                 raise
-    
+
     def update_data(self, db_type: str, table: str, data: Dict[str, Any],
                    condition: str, condition_params: Optional[Dict[str, Any]] = None,
                    host: Optional[str] = None, port: Optional[int] = None,
                    database: Optional[str] = None, user: Optional[str] = None,
                    password: Optional[str] = None, **kwargs) -> int:
         """
-        更新数据
-        
+        Update data.
+
         Args:
-            db_type: 数据库类型 (mysql, postgresql, sqlite)
-            table: 表名
-            data: 要更新的数据
-            condition: 更新条件
-            condition_params: 条件参数
-            host: 数据库主机
-            port: 数据库端口
-            database: 数据库名称
-            user: 数据库用户
-            password: 数据库密码
-            **kwargs: 其他连接参数
-            
+            db_type: Database type (mysql, postgresql, sqlite)
+            table: Table name
+            data: Data to update
+            condition: WHERE clause (must be parameterized, e.g. "id = :cond_id")
+            condition_params: Condition parameters
+            host: Database host
+            port: Database port
+            database: Database name
+            user: Database user
+            password: Database password
+            **kwargs: Additional connection parameters
+
         Returns:
-            int: 影响的行数
+            int: Number of rows affected
         """
+        # 验证标识符
+        self._validate_identifier(table, "table name")
+        self._validate_identifiers(list(data.keys()), "column name")
         # 生成更新语句
         set_clause = ', '.join([f"{k} = :{k}" for k in data.keys()])
         sql = f"UPDATE {table} SET {set_clause} WHERE {condition}"
-        
+
         # 合并参数
         params = {**data, **(condition_params or {})}
-        
+
         with self.get_session(
             db_type, host, port, database, user, password, **kwargs
         ) as session:
@@ -308,30 +332,32 @@ class DatabaseHelper:
             except SQLAlchemyError as e:
                 logger.error(f"Update data error: {e}")
                 raise
-    
+
     def delete_data(self, db_type: str, table: str, condition: str,
                    condition_params: Optional[Dict[str, Any]] = None,
                    host: Optional[str] = None, port: Optional[int] = None,
                    database: Optional[str] = None, user: Optional[str] = None,
                    password: Optional[str] = None, **kwargs) -> int:
         """
-        删除数据
-        
+        Delete data.
+
         Args:
-            db_type: 数据库类型 (mysql, postgresql, sqlite)
-            table: 表名
-            condition: 删除条件
-            condition_params: 条件参数
-            host: 数据库主机
-            port: 数据库端口
-            database: 数据库名称
-            user: 数据库用户
-            password: 数据库密码
-            **kwargs: 其他连接参数
-            
+            db_type: Database type (mysql, postgresql, sqlite)
+            table: Table name
+            condition: WHERE clause (must be parameterized)
+            condition_params: Condition parameters
+            host: Database host
+            port: Database port
+            database: Database name
+            user: Database user
+            password: Database password
+            **kwargs: Additional connection parameters
+
         Returns:
-            int: 影响的行数
+            int: Number of rows affected
         """
+        # 验证标识符
+        self._validate_identifier(table, "table name")
         # 生成删除语句
         sql = f"DELETE FROM {table} WHERE {condition}"
         
@@ -368,7 +394,10 @@ class DatabaseHelper:
         """
         if not data_list:
             return 0
-        
+
+        # 验证标识符
+        self._validate_identifier(table, "table name")
+        self._validate_identifiers(list(data_list[0].keys()), "column name")
         # 获取所有字段名
         columns = list(data_list[0].keys())
         columns_str = ', '.join(columns)

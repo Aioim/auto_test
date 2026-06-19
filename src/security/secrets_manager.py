@@ -98,7 +98,7 @@ class SecretsManager:
 
         try:
             self._load_key_file()
-            security_logger.info("✓ Encryption initialized from %s", SecurityConfig.KEY_FILE.name)
+            security_logger.info("[OK] Encryption initialized from %s", SecurityConfig.KEY_FILE.name)
         except FileNotFoundError as e:
             self._handle_missing_key(e)
         except (ValueError, InvalidSignature) as e:

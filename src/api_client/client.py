@@ -10,7 +10,7 @@ import allure
 import backoff
 import requests
 from jsonschema import ValidationError, validate
-from loguru import logger
+from logger import logger
 from requests.exceptions import ConnectionError, RequestException, Timeout
 
 

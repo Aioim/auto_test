@@ -1,66 +1,84 @@
-# config/settings.py
+"""
+配置管理模块 - 生产级多语言代码分析平台
+支持：YAML 基础配置、环境变量覆盖（无前缀，双下划线表示嵌套）、命令行覆盖
+"""
+
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Set, ClassVar
+from typing import Any, Dict, Optional, List, ClassVar, Set
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationError
-from pydantic.types import SecretStr
+from functools import lru_cache
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator, SecretStr
 from config.path import PROJECT_ROOT
-from config.env_loader import EnvLoader
 from config.yaml_loader import YamlLoader
 
 
-# ========== 配置模型 ==========
-class BrowserConfig(BaseModel):
-    headless: bool = True
-    type: str = "chromium"
-    enable_js: bool = True
-    viewport: Dict[str, int] = Field(default_factory=lambda: {"width": 1920, "height": 1080})
-    locale: str = "zh-CN"
-    permissions: list[str] = Field(default_factory=lambda: ["geolocation", "notifications", "clipboard-read"])
-    geolocation: Dict[str, float] = Field(default_factory=lambda: {"latitude": 31.2304, "longitude": 121.4737})
-    auth_dir: Optional[Path] = None
+# ============================================================================
+# 配置模型定义
+# ============================================================================
+class ProjectConfig(BaseModel):
+    """项目基础配置"""
+    name: str = "code-graph-analyzer"
+    root: Path = PROJECT_ROOT
+    version: str = "1.0.0"
 
-    @field_validator("type")
+    model_config = ConfigDict(extra="allow")
+
+
+class LanguagesConfig(BaseModel):
+    """启用的分析语言"""
+    enabled: List[str] = Field(default_factory=lambda: ["python"])
+
+    model_config = ConfigDict(extra="allow")
+
+
+class PythonConfig(BaseModel):
+    """Python 语言特定配置"""
+    external_lib_paths: List[Path] = Field(default_factory=list)
+    ignore_patterns: List[str] = Field(default_factory=list)
+
+    @field_validator("external_lib_paths", mode="before")
     @classmethod
-    def validate_browser_type(cls, v: str) -> str:
-        valid = ["chromium", "firefox", "webkit"]
-        if v not in valid:
-            raise ValueError(f"无效浏览器类型: {v}, 必须是 {valid}")
+    def validate_paths(cls, v):
+        if isinstance(v, list):
+            return [Path(p) for p in v]
         return v
 
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(extra="allow")
 
 
-class TimeoutsConfig(BaseModel):
-    page_load: int = 30000
-    element_wait: int = 10000
-    api: int = 15000
+class Neo4jConfig(BaseModel):
+    """Neo4j 连接配置"""
+    uri: str = "bolt://localhost:7687"
+    user: str = "neo4j"
+    password: SecretStr = Field(default=SecretStr("neo4j"), exclude=True)
+    database: str = "neo4j"
 
-    @field_validator("page_load", "element_wait", "api", mode="before")
-    @classmethod
-    def validate_positive(cls, v: Any) -> int:
-        if isinstance(v, (int, float)) and v <= 0:
-            raise ValueError("超时值必须大于0")
-        return int(v)
-
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(extra="allow")
 
 
-class AllureConfig(BaseModel):
-    results_dir: Path = PROJECT_ROOT / "output/reports/allure-results"
-    auto_clean: bool = True
-    default_severity: str = "critical"
+class SQLiteConfig(BaseModel):
+    """SQLite 元数据存储配置"""
+    path: Path = PROJECT_ROOT / "analysis_meta.db"
 
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(extra="allow")
+
+
+class StorageConfig(BaseModel):
+    """存储后端总配置"""
+    neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
+    sqlite: SQLiteConfig = Field(default_factory=SQLiteConfig)
+
+    model_config = ConfigDict(extra="allow")
 
 
 class LogConfig(BaseModel):
+    """日志配置 - 与现有 logger 模块兼容"""
     log_dir: Path = PROJECT_ROOT / "logs"
     log_level: str = "INFO"
-    log_file: str = "test_run.log"
+    log_file: str = "code_graph.log"
     backup_count: int = 7
     max_bytes: int = 10 * 1024 * 1024
     perf_max_bytes: int = 5 * 1024 * 1024
@@ -68,6 +86,7 @@ class LogConfig(BaseModel):
     enable_emergency_response: bool = False
     quiet: bool = False
     replace_main_with_filename: bool = True
+    structured: bool = True  # 是否输出结构化日志（JSON）
 
     SENSITIVE_KEYS: ClassVar[Set[str]] = {
         "password", "pwd", "pass", "secret", "token", "api_key", "apikey",
@@ -100,53 +119,41 @@ class AppConfig(BaseModel):
     """应用主配置 - 支持环境变量覆盖（无前缀要求，使用双下划线表示嵌套）"""
     # 核心配置
     env: str = "beta"
-    frontend_version: str = "v2026.01"
-    base_url: Optional[str] = None
-    api_base_url: Optional[str] = None
-    login_url: Optional[str] = None
-
-    # 敏感凭证（使用 SecretStr）
-    username: str = ""
-    password: SecretStr = SecretStr("")
-    api_secret_key: SecretStr = SecretStr("")
-
-    # 子配置
-    browser: BrowserConfig = Field(default_factory=BrowserConfig)
-    timeouts: TimeoutsConfig = Field(default_factory=TimeoutsConfig)
-    allure: AllureConfig = Field(default_factory=AllureConfig)
+    project: ProjectConfig = Field(default_factory=ProjectConfig)
+    languages: LanguagesConfig = Field(default_factory=LanguagesConfig)
+    python: PythonConfig = Field(default_factory=PythonConfig)
+    storage: StorageConfig = Field(default_factory=StorageConfig)
     log: LogConfig = Field(default_factory=LogConfig)
-
-    # 高级选项
-    preserve_context_on_failure: bool = False
-    video_recording: str = "failed"  # always/failed/off
-    enable_network_tracing: bool = True
-    selector_strategy: str = "lenient"
-    resource_cleanup_timeout: int = 5
 
     # 运行时信息
     time_now: datetime = Field(default_factory=datetime.now)
 
-    # 路径配置（基于 PROJECT_ROOT）
-    screenshot_dir: Path = PROJECT_ROOT / "output/screenshots"
-    visual_baseline_dir: Path = PROJECT_ROOT / "test_data/visual/baseline"
-    visual_diff_dir: Path = PROJECT_ROOT / "test_data/visual/diff"
-    visual_threshold: float = 0.92
+    # 可选全局设置
+    debug: bool = False
 
-    @field_validator("video_recording")
+    @field_validator("env")
     @classmethod
-    def validate_video_strategy(cls, v: str) -> str:
-        strategies = ["always", "failed", "off"]
-        if v not in strategies:
-            raise ValueError(f"无效视频策略: {v}, 必须是 {strategies}")
-        return v
+    def validate_env(cls, v: str) -> str:
+        return v.lower()
 
-    @field_validator("selector_strategy")
     @classmethod
-    def validate_selector_strategy(cls, v: str) -> str:
-        strategies = ["strict", "lenient"]
-        if v not in strategies:
-            raise ValueError(f"无效选择器策略: {v}, 必须是 {strategies}")
-        return v
+    def from_env(cls) -> Dict[str, Any]:
+        """
+        从环境变量构建配置字典（无前缀要求，读取所有环境变量）。
+        支持嵌套：使用双下划线 __ 表示嵌套层级，例如 PROJECT__NAME=foo 映射到 project.name。
+        """
+        env_data = {}
+        for key, value in os.environ.items():
+            clean_key = key.lower()
+            if "__" in clean_key:
+                parts = clean_key.split("__")
+                current = env_data
+                for part in parts[:-1]:
+                    current = current.setdefault(part, {})
+                current[parts[-1]] = cls._parse_env_value(value)
+            else:
+                env_data[clean_key] = cls._parse_env_value(value)
+        return env_data
 
     @staticmethod
     def _parse_env_value(value: str) -> Any:
@@ -161,28 +168,6 @@ class AppConfig(BaseModel):
         except ValueError:
             pass
         return value
-
-    @classmethod
-    def from_env(cls) -> Dict[str, Any]:
-        """
-        从环境变量构建配置字典（无前缀要求，读取所有环境变量）。
-        支持嵌套：使用双下划线 __ 表示嵌套层级，例如 BROWSER__HEADLESS=true 映射到 browser.headless。
-        """
-        env_data = {}
-        for key, value in os.environ.items():
-            # 转换为小写，便于匹配模型字段（模型字段为小写蛇形命名）
-            clean_key = key.lower()
-            
-            # 处理嵌套分隔符 __
-            if "__" in clean_key:
-                parts = clean_key.split("__")
-                current = env_data
-                for part in parts[:-1]:
-                    current = current.setdefault(part, {})
-                current[parts[-1]] = cls._parse_env_value(value)
-            else:
-                env_data[clean_key] = cls._parse_env_value(value)
-        return env_data
 
     @classmethod
     def from_env_full(cls) -> "AppConfig":
@@ -202,39 +187,42 @@ class AppConfig(BaseModel):
                 result[key] = value
         return result
 
-    model_config = ConfigDict(protected_namespaces=(), extra="ignore")
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
 
-# ========== 配置管理器 ==========
+# ============================================================================
+# 配置管理器（单例）
+# ============================================================================
 class ConfigManager:
     """统一配置管理器 - 聚合 YAML、环境变量、命令行覆盖"""
 
-    def __init__(self):
-        self._config: Optional[AppConfig] = None
-        self._yaml_loader = YamlLoader()
-        self._env_loader = EnvLoader(enable_auto_optimize=True)
-        self._overrides: Dict[str, Any] = {}
-        self._initialized = False
+    _instance: ClassVar[Optional["ConfigManager"]] = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._config: Optional[AppConfig] = None
+            cls._instance._yaml_loader = YamlLoader()
+            cls._instance._overrides: Dict[str, Any] = {}
+            cls._instance._initialized = False
+        return cls._instance
 
     def _load_full_config(self) -> AppConfig:
         """加载并合并所有配置源"""
-        # 1. 运行环境自适应优化（会修改 os.environ）
-        self._env_loader.load()
-
-        # 2. 加载 YAML 基础配置（按环境）
-        env_name = self._overrides.get("env") or os.getenv("ENV", "dev")
+        # 1. 加载 YAML 基础配置（按环境）
+        env_name = self._overrides.get("env") or os.getenv("ENV", "beta")
         yaml_config = self._yaml_loader.load_environment(env=env_name)
 
-        # 3. 从环境变量获取覆盖字典（无前缀，读取所有环境变量）
+        # 2. 从环境变量获取覆盖字典
         env_overrides = AppConfig.from_env()
 
-        # 4. 深度合并：YAML 被环境变量覆盖
+        # 3. 深度合并：YAML 被环境变量覆盖
         merged_dict = self._deep_merge(yaml_config, env_overrides)
 
-        # 5. 应用命令行覆盖（优先级最高）
+        # 4. 应用命令行覆盖（优先级最高）
         final_dict = self._deep_merge(merged_dict, self._overrides)
 
-        # 6. 验证并返回最终配置
+        # 5. 验证并返回最终配置
         return AppConfig(**final_dict)
 
     @staticmethod
@@ -252,6 +240,8 @@ class ConfigManager:
         if not self._initialized:
             try:
                 self._config = self._load_full_config()
+                # 初始化日志目录
+                self._config.log.initialize()
                 self._initialized = True
             except Exception as e:
                 raise RuntimeError(f"配置加载失败: {e}") from e
@@ -266,7 +256,7 @@ class ConfigManager:
             raise AttributeError(f"配置中不存在属性 '{name}'. 可用属性: {', '.join(available[:20])}")
 
     def get(self, path: str, default: Any = None) -> Any:
-        """通过点号路径获取嵌套配置，如 settings.get('timeouts.page_load')"""
+        """通过点号路径获取嵌套配置，如 settings.get('storage.neo4j.uri')"""
         if self._config is None:
             self.initialize()
         current = self._config.model_dump()
@@ -319,6 +309,17 @@ class ConfigManager:
             return result
         return value
 
+    def load_from_file(self, config_path: Path) -> None:
+        """直接加载指定的配置文件（忽略环境区分）"""
+        import yaml
+        if not config_path.exists():
+            raise FileNotFoundError(f"配置文件不存在: {config_path}")
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        self._config = AppConfig(**data)
+        self._config.log.initialize()
+        self._initialized = True
+
     def validate(self) -> None:
         """显式验证配置（初始化时已做）"""
         if self._config is None:
@@ -328,9 +329,10 @@ class ConfigManager:
         """导出当前配置为 YAML（隐藏敏感字段）"""
         if self._config is None:
             self.initialize()
-        data = self._config.model_dump(exclude={"admin_password", "api_secret_key"})
+        # 排除密码字段
+        data = self._config.model_dump(exclude={"storage": {"neo4j": {"password"}}})
         import yaml
-        return yaml.dump(data, default_flow_style=False, sort_keys=False)
+        return yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     def reload(self) -> None:
         """热重载配置（清空缓存并重新加载）"""
@@ -340,13 +342,30 @@ class ConfigManager:
         self.initialize()
 
 
-# ========== 全局单例 ==========
+# ============================================================================
+# 全局单例导出
+# ============================================================================
 settings = ConfigManager()
 
+# 为了兼容直接导入配置模型的需求，也可以导出模型类
+__all__ = [
+    "settings",
+    "AppConfig",
+    "ProjectConfig",
+    "LanguagesConfig",
+    "PythonConfig",
+    "Neo4jConfig",
+    "SQLiteConfig",
+    "StorageConfig",
+    "LogConfig",
+]
+
 if __name__ == "__main__":
-    print(settings.env)
-    print(settings.username)
-    print(settings.password.get_secret_value())
-    print(settings.browser)
-    # print(settings.to_yaml())
-    print(settings.log)
+    # 简单测试
+    print("=== 配置测试 ===")
+    print(f"项目名称: {settings.project.name}")
+    print(f"项目根目录: {settings.project.root}")
+    print(f"环境: {settings.env}")
+    print(f"日志级别: {settings.log.log_level}")
+    print(f"Neo4j URI: {settings.storage.neo4j.uri}")
+    print(f"密码（隐藏）: {settings.storage.neo4j.password}")
