@@ -67,7 +67,10 @@ playwright install
 pytest
 
 # 运行特定测试文件
-pytest tests/test_login.py
+pytest tests/unit/test_cache_utils.py
+
+# 运行特定标记的测试
+pytest -m smoke
 
 # 运行带 Allure 报告的测试
 pytest --alluredir=output/allure-results
@@ -84,23 +87,25 @@ allure open output/allure-report
 ```
 auto_test/
 ├── environments/          # 环境配置文件
+│   ├── alpha.yaml         # 内测环境
 │   ├── base.yaml          # 基础配置
-│   ├── dev.yaml           # 开发环境
-│   ├── prod.yaml          # 生产环境
-│   └── staging.yaml       # 预发布环境
+│   ├── beta.yaml          # 公测环境
+│   └── prod.yaml          # 生产环境
 ├── pages/                 # 页面对象层
 │   ├── components/        # 可复用组件
 │   │   ├── base_component.py
-│   │   └── header.py
+│   │   ├── header.py
+│   │   └── login_page.py
 │   ├── __init__.py
 │   ├── baidu_page.py      # 百度搜索页示例
 │   ├── baidu_selector.py  # 百度页面选择器
 │   └── base_page.py       # 基础页面类
 ├── src/                   # 源代码
+│   ├── api_client/        # API 测试客户端
+│   │   ├── __init__.py
+│   │   └── client.py
 │   ├── auth/              # 认证和登录管理
 │   │   ├── __init__.py
-│   │   ├── cache_utils.py
-│   │   ├── login_cache.py
 │   │   └── smart_login.py
 │   ├── config/            # 配置管理
 │   │   ├── __init__.py
@@ -111,12 +116,13 @@ auto_test/
 │   │   └── yaml_loader.py # YAML配置加载器
 │   ├── core/              # 核心功能
 │   │   ├── __init__.py
-│   │   ├── allure_attachments.py
-│   │   ├── network.py
-│   │   ├── screenshot.py
-│   │   ├── selector.py
-│   │   ├── visual.py
-│   │   └── wait.py
+│   │   ├── cache_utils.py       # 浏览器状态缓存工具
+│   │   ├── login_cache.py       # Token 缓存管理
+│   │   ├── network_capture.py   # 网络请求捕获
+│   │   ├── screenshot.py        # 截图工具
+│   │   ├── table_helper.py      # 表格操作助手
+│   │   ├── verify_security_log.py # 安全日志验证
+│   │   └── visual_validator.py  # 视觉验证工具
 │   ├── data/              # 数据管理
 │   │   ├── __init__.py
 │   │   ├── data_faker.py  # 测试数据生成
@@ -124,21 +130,51 @@ auto_test/
 │   │   └── yaml_cases_loader.py # YAML测试用例加载
 │   ├── logger/            # 日志系统
 │   │   ├── __init__.py
-│   │   ├── lazy.py
-│   │   └── secure_log.py
+│   │   ├── core.py              # 核心日志器
+│   │   ├── filters.py           # 日志过滤器
+│   │   ├── formatters.py        # 格式化器
+│   │   ├── handlers.py          # 处理器
+│   │   ├── helpers.py           # 辅助工具
+│   │   ├── lazy.py              # 延迟初始化
+│   │   ├── masking.py           # 敏感信息脱敏
+│   │   └── metrics.py           # 性能指标
 │   ├── monitoring/        # 错误监控
 │   │   ├── __init__.py
-│   │   └── error_monitor.py
+│   │   ├── error_monitor.py     # 页面错误监控装饰器
+│   │   └── log_monitor.py       # 日志监控
+│   ├── security/          # 安全管理
+│   │   ├── __init__.py
+│   │   ├── env_encryptor.py     # 环境变量加密
+│   │   ├── key_rotator.py       # 密钥轮换
+│   │   ├── secret_str.py        # 安全字符串类型
+│   │   ├── secrets_manager.py   # 密钥管理器
+│   │   └── secure_env_loader.py # 安全环境加载器
+│   ├── utils/             # 通用工具
+│   │   ├── __init__.py
+│   │   ├── allure_attachment.py # Allure 报告附件
+│   │   ├── file_filter.py       # 文件过滤器
+│   │   ├── file_utils.py        # 文件工具
+│   │   ├── str_formatters.py    # 字符串格式化
+│   │   └── time_formatter.py    # 时间格式化
 │   └── __init__.py
 ├── test_data/             # 测试数据
-│   ├── visual/            # 视觉测试数据
-│   ├── login_cases.yaml   # 登录测试用例
-│   └── login_page.yaml    # 登录页配置
+│   └── test_cases/
+│       ├── login_cases.yaml   # 登录测试用例
+│       ├── login_page.yaml    # 登录页配置
+│       └── test_cases.yaml    # 通用测试用例
 ├── tests/                 # 测试用例
-│   ├── conftest.py        # pytest配置
-│   ├── test_dialog_handling.py
-│   ├── test_login.py
-│   └── test_screenshot_helper.py
+│   ├── api/               # API 测试
+│   │   ├── conftest.py
+│   │   └── example.py
+│   ├── e2e/               # 端到端测试
+│   │   └── conftest.py
+│   ├── unit/              # 单元测试
+│   │   ├── __init__.py
+│   │   ├── test_cache_utils.py
+│   │   ├── test_db_helper.py
+│   │   └── test_lazy_logger.py
+│   ├── conftest.py        # pytest 全局配置
+│   └── conftest1.py
 ├── .gitignore
 ├── README.md
 └── pyproject.toml         # 项目配置（包含pytest配置）
@@ -169,8 +205,8 @@ auto_test/
 `src/auth/` 目录提供智能登录和认证管理功能：
 
 - **smart_login.py**：智能登录管理，自动处理登录状态，支持缓存和多环境
-- **login_cache.py**：API 测试的 Token 缓存管理
-- **cache_utils.py**：浏览器登录状态缓存公共工具
+
+浏览器状态缓存和 Token 缓存管理已迁移至 `src/core/`（`cache_utils.py`、`login_cache.py`）。
 
 ### 4. 数据管理
 
@@ -185,24 +221,58 @@ auto_test/
 `src/core/` 目录提供核心功能模块：
 
 - **screenshot.py**：高级截图功能，支持页面截图、元素截图、高亮标注等
-- **selector.py**：智能选择器辅助，支持多种定位策略和智能解析
-- **visual.py**：视觉验证工具，支持图像比较和视觉回归测试
-- **network.py**：网络捕获工具，支持捕获和分析网络请求
-- **allure_attachments.py**：Allure 报告附件工具，支持添加各种类型的附件
-- **wait.py**：等待工具，提供智能的元素等待和页面状态等待
+- **visual_validator.py**：视觉验证工具，支持图像比较和视觉回归测试
+- **network_capture.py**：网络捕获工具，支持捕获和分析网络请求
+- **cache_utils.py**：浏览器登录状态缓存公共工具
+- **login_cache.py**：API 测试的 Token 缓存管理
+- **table_helper.py**：表格操作助手，支持表格数据的提取和验证
+- **verify_security_log.py**：安全日志验证工具
 
 ### 6. 错误监控
 
 `src/monitoring/` 目录提供错误监控功能：
 
 - **error_monitor.py**：错误监控装饰器，支持捕获页面弹窗、控制台错误、网络请求失败等
+- **log_monitor.py**：日志监控工具，支持实时日志采集和分析
 
 ### 7. 日志系统
 
 `src/logger/` 目录提供高级日志功能：
 
-- **secure_log.py**：安全日志系统，支持日志脱敏和结构化日志
+- **core.py**：核心日志器，统一日志入口
+- **masking.py**：敏感信息自动脱敏（password、token、secret 等字段）
+- **filters.py**：日志过滤器，支持按级别/模块过滤
+- **formatters.py**：日志格式化器，支持结构化输出
+- **handlers.py**：日志处理器，支持文件轮转、控制台输出等
+- **helpers.py**：日志辅助工具
 - **lazy.py**：延迟初始化日志，提高性能
+- **metrics.py**：性能指标日志
+
+### 8. API 客户端
+
+`src/api_client/` 目录提供 API 测试客户端：
+
+- **client.py**：API 测试客户端，支持自动重试（指数退避）、断言链式调用、请求/响应敏感信息过滤
+
+### 9. 安全管理
+
+`src/security/` 目录提供安全相关功能：
+
+- **secrets_manager.py**：密钥管理器，统一管理各类密钥
+- **env_encryptor.py**：环境变量加密工具
+- **key_rotator.py**：密钥轮换机制
+- **secret_str.py**：安全字符串类型（Pydantic `SecretStr`），自动从日志/序列化中排除
+- **secure_env_loader.py**：安全环境变量加载器
+
+### 10. 通用工具
+
+`src/utils/` 目录提供通用工具函数：
+
+- **allure_attachment.py**：Allure 报告附件工具
+- **file_filter.py**：文件过滤器
+- **file_utils.py**：文件操作工具
+- **str_formatters.py**：字符串格式化工具
+- **time_formatter.py**：时间格式化工具
 
 ## 测试用例编写
 
@@ -211,7 +281,7 @@ auto_test/
 ```python
 import pytest
 from pages.baidu_page import BaiduPage
-from utils import logger, log_step
+from logger import logger, log_step
 
 def test_baidu_search(page):
     """测试百度搜索功能"""
@@ -238,7 +308,7 @@ def test_baidu_search(page):
 ```python
 import pytest
 from pages.login_page import LoginPage
-from utils import load_yaml_file
+from data.yaml_cases_loader import load_yaml_file
 
 def test_login_with_data(page, yaml_data):
     """使用数据驱动测试登录功能"""
@@ -272,7 +342,7 @@ def test_dashboard_access():
 
 ```python
 import pytest
-from utils import APIClient
+from api_client.client import APIClient
 
 def test_api_endpoint(api_client):
     """测试 API 端点"""
@@ -292,7 +362,7 @@ def test_api_endpoint(api_client):
 
 ```python
 import pytest
-from utils.monitoring import monitor_errors
+from monitoring.error_monitor import monitor_errors
 
 def test_with_error_monitoring(page):
     """测试错误监控功能"""
@@ -321,8 +391,8 @@ def test_with_error_monitoring(page):
 在 `environments/` 目录下定义不同环境的配置：
 
 - `base.yaml`：基础配置
-- `dev.yaml`：开发环境配置
-- `staging.yaml`：预发布环境配置
+- `alpha.yaml`：内测环境配置
+- `beta.yaml`：公测环境配置
 - `prod.yaml`：生产环境配置
 
 ### 环境变量
@@ -436,10 +506,10 @@ pytest --html=output/html/report.html
 
 ```bash
 # 查看测试日志
-cat output/logs/test_run.log
+cat output/logs/*.log
 
-# 查看错误日志
-cat output/logs/error_*.log
+# 查看安全事件日志
+cat output/logs/security.log
 ```
 
 ## CI/CD 集成

@@ -11,7 +11,7 @@ import re
 import os
 from contextlib import contextmanager
 from typing import (
-    Any, Callable, Dict, Generator, List, Literal, Optional, Tuple, Union, Pattern
+    Any, Callable, Dict, Generator, List, Literal, Optional, Union, Pattern
 )
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs, urlunparse
 
@@ -21,9 +21,16 @@ from playwright.sync_api import (
 
 from config import settings
 from logger import logger
-from core.selector import (
-    SelectorHelper, Selector, SelectorLike, ResolveInfo, FrameNotFoundError
-)
+# ============================================================================
+# 本地定义（原 core.selector 迁移）
+# ============================================================================
+
+class FrameNotFoundError(Exception):
+    """Frame not found"""
+    pass
+
+
+SelectorArg = Union[str, Locator]
 
 
 # ============================================================================
@@ -69,16 +76,14 @@ class ElementActionsMixin:
     """元素操作功能（点击、输入、获取属性等）"""
 
     # ----- 底层定位 -----
-    def resolve(self, selector: SelectorLike) -> Locator:
+    def resolve(self, selector: SelectorArg) -> Locator:
         """解析选择器并返回 Locator（不等待）"""
-        return SelectorHelper.resolve_locator(self.page, selector)
-
-    def resolve_with_info(self, selector: SelectorLike) -> Tuple[Locator, ResolveInfo]:
-        """返回 (Locator, ResolveInfo)"""
-        return SelectorHelper.resolve_with_meta(self.page, selector)
+        if isinstance(selector, str):
+            return self.page.locator(selector)
+        return selector
 
     # ----- 查找与等待 -----
-    def find(self, selector: SelectorLike,
+    def find(self, selector: SelectorArg,
              wait_for: Literal["visible", "hidden", "attached", "detached"] = "visible",
              timeout: Optional[int] = None,
              retries: Optional[int] = None,
@@ -89,14 +94,26 @@ class ElementActionsMixin:
         """查找元素并等待到指定状态，支持重试退避"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
         retries = retries if retries is not None else self.DEFAULT_RETRIES
-        return SelectorHelper.find(
-            self.page, selector, wait_for=wait_for,
-            timeout=timeout, retries=retries,
-            initial_delay=initial_delay, backoff_factor=backoff_factor,
-            max_delay=max_delay, **kwargs
-        )
+        last_exc = None
 
-    def exists(self, selector: SelectorLike,
+        for attempt in range(1, max(1, retries) + 1):
+            loc = self.resolve(selector)
+            try:
+                loc.wait_for(state=wait_for, timeout=timeout)
+                return loc
+            except PlaywrightTimeoutError as e:
+                last_exc = e
+                logger.warning("Wait attempt %s/%s failed: %s", attempt, retries, e)
+                if attempt >= retries:
+                    break
+                delay = min(initial_delay * (backoff_factor ** (attempt - 1)), max_delay)
+                time.sleep(delay)
+
+        raise RuntimeError(
+            f"Element not {wait_for} after {retries} attempts: {selector}"
+        ) from last_exc
+
+    def exists(self, selector: SelectorArg,
                timeout: Optional[int] = None,
                retries: Optional[int] = None,
                **kwargs) -> bool:
@@ -108,11 +125,13 @@ class ElementActionsMixin:
         if timeout is None:
             timeout = 100  # 毫秒，快速失败
         retries = retries if retries is not None else 1
-        return SelectorHelper.exists(
-            self.page, selector, timeout=timeout, retries=retries, **kwargs
-        )
+        try:
+            self.find(selector, wait_for="attached", timeout=timeout, retries=retries, **kwargs)
+            return True
+        except (PlaywrightTimeoutError, RuntimeError):
+            return False
 
-    def wait_for(self, selector: SelectorLike,
+    def wait_for(self, selector: SelectorArg,
                  state: Optional[Literal["attached", "detached", "hidden", "visible"]] = None,
                  timeout: Optional[int] = None) -> Locator:
         """等待元素达到指定状态"""
@@ -122,7 +141,7 @@ class ElementActionsMixin:
         return locator
 
     # ----- 点击操作 -----
-    def click(self, selector: SelectorLike,
+    def click(self, selector: SelectorArg,
               wait_for: str = "visible",
               timeout: Optional[int] = None,
               retries: Optional[int] = None,
@@ -143,7 +162,7 @@ class ElementActionsMixin:
         logger.debug(f"Clicking element: {selector}")
         locator.click(**opts)
 
-    def double_click(self, selector: SelectorLike,
+    def double_click(self, selector: SelectorArg,
                      wait_for: str = "visible",
                      timeout: Optional[int] = None,
                      force: bool = False,
@@ -153,7 +172,7 @@ class ElementActionsMixin:
         logger.debug(f"Double clicking element: {selector}")
         locator.dblclick(timeout=timeout, force=force)
 
-    def right_click(self, selector: SelectorLike,
+    def right_click(self, selector: SelectorArg,
                     wait_for: str = "visible",
                     timeout: Optional[int] = None,
                     **kwargs) -> None:
@@ -162,7 +181,7 @@ class ElementActionsMixin:
         logger.debug(f"Right clicking element: {selector}")
         locator.click(button="right", timeout=timeout)
 
-    def hover(self, selector: SelectorLike,
+    def hover(self, selector: SelectorArg,
               wait_for: str = "visible",
               timeout: Optional[int] = None,
               **kwargs) -> None:
@@ -172,7 +191,7 @@ class ElementActionsMixin:
         locator.hover(timeout=timeout)
 
     # ----- 输入操作 -----
-    def fill(self, selector: SelectorLike, value: str,
+    def fill(self, selector: SelectorArg, value: str,
              wait_for: str = "visible",
              timeout: Optional[int] = None,
              retries: Optional[int] = None,
@@ -184,7 +203,7 @@ class ElementActionsMixin:
         logger.debug(f"Filling element with value: {value[:50]}")
         locator.fill(value, timeout=timeout)
 
-    def type(self, selector: SelectorLike, text: str,
+    def type(self, selector: SelectorArg, text: str,
              wait_for: str = "visible",
              timeout: Optional[int] = None,
              delay: int = 0,
@@ -195,7 +214,7 @@ class ElementActionsMixin:
         logger.debug(f"Typing text: {text[:50]}")
         locator.type(text, delay=delay, timeout=timeout)
 
-    def clear(self, selector: SelectorLike,
+    def clear(self, selector: SelectorArg,
               wait_for: str = "visible",
               timeout: Optional[int] = None,
               **kwargs) -> None:
@@ -205,7 +224,7 @@ class ElementActionsMixin:
         logger.debug("Clearing element")
         locator.clear(timeout=timeout)  # 修复：传递 timeout
 
-    def press(self, selector: SelectorLike, key: str,
+    def press(self, selector: SelectorArg, key: str,
               wait_for: str = "visible",
               timeout: Optional[int] = None,
               **kwargs) -> None:
@@ -215,7 +234,7 @@ class ElementActionsMixin:
         logger.debug(f"Pressing key: {key}")
         locator.press(key, timeout=timeout)
 
-    def press_sequentially(self, selector: SelectorLike, text: str,
+    def press_sequentially(self, selector: SelectorArg, text: str,
                            wait_for: str = "visible",
                            timeout: Optional[int] = None,
                            delay: int = 100,
@@ -229,7 +248,7 @@ class ElementActionsMixin:
         locator.press_sequentially(text, delay=delay, timeout=timeout)
 
     # ----- 获取文本与属性 -----
-    def text(self, selector: SelectorLike,
+    def text(self, selector: SelectorArg,
              wait_for: str = "visible",
              timeout: Optional[int] = None,
              **kwargs) -> str:
@@ -237,7 +256,7 @@ class ElementActionsMixin:
         locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         return locator.inner_text()
 
-    def all_texts(self, selector: SelectorLike,
+    def all_texts(self, selector: SelectorArg,
                   wait_for: str = "attached",
                   timeout: Optional[int] = None,
                   **kwargs) -> List[str]:
@@ -245,7 +264,7 @@ class ElementActionsMixin:
         locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         return locator.all_inner_texts()
 
-    def attribute(self, selector: SelectorLike, name: str,
+    def attribute(self, selector: SelectorArg, name: str,
                   wait_for: str = "visible",
                   timeout: Optional[int] = None,
                   **kwargs) -> Optional[str]:
@@ -253,7 +272,7 @@ class ElementActionsMixin:
         locator = self.find(selector, wait_for=wait_for, timeout=timeout, **kwargs)
         return locator.get_attribute(name)
 
-    def all_attributes(self, selector: SelectorLike, name: str,
+    def all_attributes(self, selector: SelectorArg, name: str,
                        wait_for: str = "attached",
                        timeout: Optional[int] = None,
                        **kwargs) -> List[Optional[str]]:
@@ -265,7 +284,7 @@ class ElementActionsMixin:
         return [el.get_attribute(name) for el in elements]
 
     # ----- 状态检查 -----
-    def is_checked(self, selector: SelectorLike,
+    def is_checked(self, selector: SelectorArg,
                    timeout: Optional[int] = None) -> bool:
         """检查复选框/单选框是否选中（超时返回 False）"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
@@ -276,7 +295,7 @@ class ElementActionsMixin:
             logger.debug(f"Timeout checking if element is checked: {selector}")
             return False
 
-    def is_visible(self, selector: SelectorLike,
+    def is_visible(self, selector: SelectorArg,
                    timeout: Optional[int] = None) -> bool:
         """检查元素是否可见（超时返回 False）"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
@@ -287,7 +306,7 @@ class ElementActionsMixin:
             logger.debug(f"Timeout checking if element is visible: {selector}")
             return False
 
-    def is_enabled(self, selector: SelectorLike,
+    def is_enabled(self, selector: SelectorArg,
                    timeout: Optional[int] = None) -> bool:
         """检查元素是否启用（超时返回 False）"""
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
@@ -298,12 +317,12 @@ class ElementActionsMixin:
             logger.debug(f"Timeout checking if element is enabled: {selector}")
             return False
 
-    def is_disabled(self, selector: SelectorLike,
+    def is_disabled(self, selector: SelectorArg,
                     timeout: Optional[int] = None) -> bool:
         return not self.is_enabled(selector, timeout)
 
     # ----- 表单操作 -----
-    def select_option(self, selector: SelectorLike,
+    def select_option(self, selector: SelectorArg,
                       value: Union[str, List[str]],
                       wait_for: str = "visible",
                       timeout: Optional[int] = None,
@@ -315,7 +334,7 @@ class ElementActionsMixin:
         logger.debug(f"Selecting options: {value}")
         locator.select_option(value, timeout=timeout)
 
-    def upload_file(self, selector: SelectorLike,
+    def upload_file(self, selector: SelectorArg,
                     file_path: Union[str, List[str]],
                     wait_for: str = "visible",
                     timeout: Optional[int] = None,
@@ -327,7 +346,7 @@ class ElementActionsMixin:
         logger.debug(f"Uploading files: {file_path}")
         locator.set_input_files(file_path, timeout=timeout)
 
-    def clear_file(self, selector: SelectorLike,
+    def clear_file(self, selector: SelectorArg,
                    wait_for: str = "visible",
                    timeout: Optional[int] = None,
                    **kwargs) -> None:
@@ -340,7 +359,7 @@ class ElementActionsMixin:
 class AssertionMixin:
     """断言功能"""
 
-    def assert_exists(self, selector: SelectorLike,
+    def assert_exists(self, selector: SelectorArg,
                       message: Optional[str] = None,
                       timeout: Optional[int] = None) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
@@ -348,7 +367,7 @@ class AssertionMixin:
         msg = message or f"Element should exist: {selector}"
         assert exists, msg
 
-    def assert_not_exists(self, selector: SelectorLike,
+    def assert_not_exists(self, selector: SelectorArg,
                           message: Optional[str] = None,
                           timeout: Optional[int] = None) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
@@ -356,7 +375,7 @@ class AssertionMixin:
         msg = message or f"Element should not exist: {selector}"
         assert not exists, msg
 
-    def assert_visible(self, selector: SelectorLike,
+    def assert_visible(self, selector: SelectorArg,
                        message: Optional[str] = None,
                        timeout: Optional[int] = None) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
@@ -364,7 +383,7 @@ class AssertionMixin:
         msg = message or f"Element should be visible: {selector}"
         assert visible, msg
 
-    def assert_hidden(self, selector: SelectorLike,
+    def assert_hidden(self, selector: SelectorArg,
                       message: Optional[str] = None,
                       timeout: Optional[int] = None) -> None:
         timeout = timeout if timeout is not None else self.DEFAULT_TIMEOUT
@@ -372,7 +391,7 @@ class AssertionMixin:
         msg = message or f"Element should be hidden: {selector}"
         assert not visible, msg
 
-    def assert_text(self, selector: SelectorLike,
+    def assert_text(self, selector: SelectorArg,
                     expected: str,
                     exact: bool = False,
                     message: Optional[str] = None,
@@ -387,7 +406,7 @@ class AssertionMixin:
             msg = message or f"Text should contain '{expected}', got '{actual}'"
             assert expected in actual, msg
 
-    def assert_attribute(self, selector: SelectorLike,
+    def assert_attribute(self, selector: SelectorArg,
                          name: str,
                          expected: str,
                          message: Optional[str] = None,
@@ -512,7 +531,7 @@ class NetworkMixin:
         finally:
             self.page.off("request", handler)
 
-    def download_file(self, selector: SelectorLike,
+    def download_file(self, selector: SelectorArg,
                       wait_for: str = "visible",
                       timeout: Optional[int] = None,
                       **kwargs) -> str:
@@ -527,7 +546,7 @@ class NetworkMixin:
         logger.info(f"File downloaded: {download.path()}")
         return download.path()
 
-    def download_file_to(self, selector: SelectorLike,
+    def download_file_to(self, selector: SelectorArg,
                          target_path: str,
                          wait_for: str = "visible",
                          timeout: Optional[int] = None,
@@ -661,7 +680,7 @@ class DialogMixin:
 class ScrollMixin:
     """滚动操作"""
 
-    def scroll_to(self, selector: SelectorLike,
+    def scroll_to(self, selector: SelectorArg,
                   wait_for: str = "visible",
                   timeout: Optional[int] = None,
                   **kwargs) -> None:
@@ -684,7 +703,7 @@ class ScreenshotMixin:
 
     def screenshot(self, path: Optional[str] = None,
                    full_page: bool = False,
-                   selector: Optional[SelectorLike] = None,
+                   selector: Optional[SelectorArg] = None,
                    **kwargs) -> bytes:
         if selector:
             locator = self.resolve(selector)
@@ -716,16 +735,15 @@ class ScreenshotMixin:
             self.screenshot_on_failure(name=name)
             raise
 
-    def debug_info(self, selector: SelectorLike) -> Dict[str, Any]:
+    def debug_info(self, selector: SelectorArg) -> Dict[str, Any]:
         """获取选择器的调试信息"""
         try:
-            locator, info = self.resolve_with_info(selector)
+            loc = self.resolve(selector)
             return {
-                "strategy": info.strategy,
-                "context": info.ctx,
-                "attempts": info.attempts,
-                "exists": locator.count() > 0 if hasattr(locator, "count") else None,
-                "visible": locator.is_visible() if hasattr(locator, "is_visible") else None
+                "exists": loc.count() > 0,
+                "visible": loc.is_visible(),
+                "enabled": loc.is_enabled(),
+                "locator": str(loc)
             }
         except Exception as e:
             return {"error": str(e), "type": type(e).__name__}
@@ -737,7 +755,7 @@ class JavaScriptMixin:
     def evaluate(self, expression: str, *args) -> Any:
         return self.page.evaluate(expression, *args)
 
-    def evaluate_on_selector(self, selector: SelectorLike, expression: str, *args) -> Any:
+    def evaluate_on_selector(self, selector: SelectorArg, expression: str, *args) -> Any:
         locator = self.resolve(selector)
         return locator.evaluate(expression, *args)
 
@@ -745,7 +763,7 @@ class JavaScriptMixin:
 class ExpectMixin:
     """Playwright expect 断言封装（支持自动重试）"""
 
-    def expect(self, selector: SelectorLike, **kwargs) -> Any:
+    def expect(self, selector: SelectorArg, **kwargs) -> Any:
         """
         返回 Playwright 的 expect 断言对象，支持链式调用。
         用法：self.expect(selector).to_be_visible()
@@ -754,42 +772,42 @@ class ExpectMixin:
         return playwright_expect(locator, **kwargs)
 
     # ----- 常用断言快捷方法 -----
-    def expect_visible(self, selector: SelectorLike, message: Optional[str] = None) -> None:
+    def expect_visible(self, selector: SelectorArg, message: Optional[str] = None) -> None:
         """断言元素可见"""
         if message:
             self.expect(selector).to_be_visible(message=message)
         else:
             self.expect(selector).to_be_visible()
 
-    def expect_hidden(self, selector: SelectorLike, message: Optional[str] = None) -> None:
+    def expect_hidden(self, selector: SelectorArg, message: Optional[str] = None) -> None:
         """断言元素不可见"""
         if message:
             self.expect(selector).to_be_hidden(message=message)
         else:
             self.expect(selector).to_be_hidden()
 
-    def expect_enabled(self, selector: SelectorLike, message: Optional[str] = None) -> None:
+    def expect_enabled(self, selector: SelectorArg, message: Optional[str] = None) -> None:
         """断言元素启用"""
         if message:
             self.expect(selector).to_be_enabled(message=message)
         else:
             self.expect(selector).to_be_enabled()
 
-    def expect_disabled(self, selector: SelectorLike, message: Optional[str] = None) -> None:
+    def expect_disabled(self, selector: SelectorArg, message: Optional[str] = None) -> None:
         """断言元素禁用"""
         if message:
             self.expect(selector).to_be_disabled(message=message)
         else:
             self.expect(selector).to_be_disabled()
 
-    def expect_checked(self, selector: SelectorLike, message: Optional[str] = None) -> None:
+    def expect_checked(self, selector: SelectorArg, message: Optional[str] = None) -> None:
         """断言复选框/单选框选中"""
         if message:
             self.expect(selector).to_be_checked(message=message)
         else:
             self.expect(selector).to_be_checked()
 
-    def expect_text(self, selector: SelectorLike, expected: str, exact: bool = False,
+    def expect_text(self, selector: SelectorArg, expected: str, exact: bool = False,
                     message: Optional[str] = None) -> None:
         """断言元素文本包含或精确匹配"""
         locator = self.resolve(selector)
@@ -804,7 +822,7 @@ class ExpectMixin:
             else:
                 playwright_expect(locator).to_contain_text(expected)
 
-    def expect_value(self, selector: SelectorLike, expected: str, message: Optional[str] = None) -> None:
+    def expect_value(self, selector: SelectorArg, expected: str, message: Optional[str] = None) -> None:
         """断言输入框的值"""
         locator = self.resolve(selector)
         if message:
@@ -812,7 +830,7 @@ class ExpectMixin:
         else:
             playwright_expect(locator).to_have_value(expected)
 
-    def expect_count(self, selector: SelectorLike, expected: int, message: Optional[str] = None) -> None:
+    def expect_count(self, selector: SelectorArg, expected: int, message: Optional[str] = None) -> None:
         """断言匹配元素的数量"""
         locator = self.resolve(selector)
         if message:
@@ -820,7 +838,7 @@ class ExpectMixin:
         else:
             playwright_expect(locator).to_have_count(expected)
 
-    def expect_attribute(self, selector: SelectorLike, name: str, value: str, message: Optional[str] = None) -> None:
+    def expect_attribute(self, selector: SelectorArg, name: str, value: str, message: Optional[str] = None) -> None:
         """断言元素属性值"""
         locator = self.resolve(selector)
         if message:
@@ -911,11 +929,6 @@ class BasePage(
         return self._console_logs
 
     # ----- 实用工具 -----
-    @staticmethod
-    def format_selector(selector: Selector, **kwargs) -> Selector:
-        """格式化 Selector（替换模板变量）"""
-        return selector.formatted(**kwargs)
-
     def get_page_load_time(self) -> Optional[float]:
         return self._load_time
 

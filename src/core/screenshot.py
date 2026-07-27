@@ -28,9 +28,6 @@ from playwright.sync_api import Page, Locator, ElementHandle
 import allure
 from config import settings
 from logger import logger
-from core.selector import SelectorHelper, Selector, SelectorLike
-
-
 # ==================== 常量定义 ====================
 
 class ScreenshotType(Enum):
@@ -244,7 +241,7 @@ class ScreenshotHelper:
     def _capture_screenshot_bytes(
             self,
             screenshot_type: ScreenshotType,
-            selector: Optional[Union[Locator, str, ElementHandle, Selector]] = None,
+            selector: Optional[Union[Locator, str, ElementHandle]] = None,
             format: ScreenshotFormat = DEFAULT_FORMAT,
             quality: Optional[int] = None,
             timeout: Optional[int] = None,
@@ -308,7 +305,7 @@ class ScreenshotHelper:
 
     def _capture_element_screenshot(
             self,
-            selector: Optional[Union[Locator, str, ElementHandle, Selector]],
+            selector: Optional[Union[Locator, str, ElementHandle]],
             timeout: Optional[int],
             options: Dict[str, Any]
     ) -> bytes:
@@ -324,7 +321,7 @@ class ScreenshotHelper:
 
     def _capture_highlighted_element_screenshot(
             self,
-            selector: Optional[Union[Locator, str, ElementHandle, Selector]],
+            selector: Optional[Union[Locator, str, ElementHandle]],
             timeout: Optional[int],
             options: Dict[str, Any]
     ) -> bytes:
@@ -479,7 +476,7 @@ class ScreenshotHelper:
             name: Optional[str] = None,
             screenshot_type: ScreenshotType = ScreenshotType.VIEWPORT,
             full_page: Optional[bool] = None,
-            selector: Optional[Union[Locator, str, ElementHandle, Selector]] = None,
+            selector: Optional[Union[Locator, str, ElementHandle]] = None,
             format: ScreenshotFormat = DEFAULT_FORMAT,
             quality: Optional[int] = None,
             timeout: Optional[int] = None,
@@ -560,7 +557,7 @@ class ScreenshotHelper:
             func_name: str,
             error_message: Optional[str] = None,
             screenshot_type: ScreenshotType = ScreenshotType.FULL_PAGE,
-            selector: Optional[Union[Locator, str, ElementHandle, Selector]] = None,
+            selector: Optional[Union[Locator, str, ElementHandle]] = None,
             additional_tags: Optional[Dict[str, str]] = None,
             add_timestamp: bool = True,
             **kwargs
@@ -604,7 +601,7 @@ class ScreenshotHelper:
     # 其他公共方法（保持兼容）
     def take_element_screenshot(
             self,
-            selector: Union[Locator, str, ElementHandle, Selector],
+            selector: Union[Locator, str, ElementHandle],
             name: Optional[str] = None,
             highlight: bool = False,
             **kwargs
@@ -666,7 +663,7 @@ class ScreenshotHelper:
             pass
         return True
 
-    def highlight_element(self, selector: Union[Locator, str, ElementHandle, Selector],
+    def highlight_element(self, selector: Union[Locator, str, ElementHandle],
                           color: str = _HIGHLIGHT_BORDER_COLOR,
                           thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
                           style: str = _HIGHLIGHT_BORDER_STYLE,
@@ -683,7 +680,7 @@ class ScreenshotHelper:
             logger.warning(f"Failed to highlight element: {e}")
             return False
 
-    def highlight_elements(self, selector: Union[Locator, str, Selector],
+    def highlight_elements(self, selector: Union[Locator, str],
                            color: str = _HIGHLIGHT_BORDER_COLOR,
                            thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
                            style: str = _HIGHLIGHT_BORDER_STYLE,
@@ -717,7 +714,7 @@ class ScreenshotHelper:
             return 0
 
     @contextmanager
-    def highlighted_context(self, selector: Union[Locator, str, ElementHandle, Selector],
+    def highlighted_context(self, selector: Union[Locator, str, ElementHandle],
                             color: str = _HIGHLIGHT_BORDER_COLOR,
                             thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
                             style: str = _HIGHLIGHT_BORDER_STYLE,
@@ -730,7 +727,7 @@ class ScreenshotHelper:
         finally:
             self.remove_highlight()
 
-    def highlight_and_capture(self, selector: Union[Locator, str, ElementHandle, Selector],
+    def highlight_and_capture(self, selector: Union[Locator, str, ElementHandle],
                               name: Optional[str] = None,
                               color: str = _HIGHLIGHT_BORDER_COLOR,
                               thickness: int = _HIGHLIGHT_BORDER_THICKNESS,
@@ -813,11 +810,9 @@ class ScreenshotHelper:
 
     # ==================== 工具方法 ====================
 
-    def _resolve_locator(self, selector: Union[Locator, str, Selector]) -> Locator:
+    def _resolve_locator(self, selector: Union[Locator, str]) -> Locator:
         if isinstance(selector, Locator):
             return selector
-        if isinstance(selector, Selector):
-            return SelectorHelper.resolve_locator(self.page, selector)
         if isinstance(selector, str):
             if selector in self._locator_cache:
                 return self._locator_cache[selector]
@@ -901,7 +896,7 @@ class ScreenshotHelper:
             raise
 
     def get_screenshot_as_base64(self, screenshot_type: ScreenshotType = ScreenshotType.VIEWPORT,
-                                 selector: Optional[Union[Locator, str, ElementHandle, Selector]] = None,
+                                 selector: Optional[Union[Locator, str, ElementHandle]] = None,
                                  format: ScreenshotFormat = DEFAULT_FORMAT,
                                  quality: Optional[int] = None,
                                  timeout: Optional[int] = None,

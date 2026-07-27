@@ -3,10 +3,19 @@
 """
 from typing import Dict, Any
 from base_page import BasePage
-from baidu_selector import search_input, search_results, search_button, search_suggestions, first_result_title, \
-    baidu_logo
 from logger import logger
 
+search_input = "#chat-textarea"
+
+search_button = "button:has-text('百度一下')"
+
+search_results = "#content_left .result-op"
+
+first_result_title = "#content_left .result-op .title a"
+
+search_suggestions = "#sugWrapper .sug-list"
+
+baidu_logo = "#s_lg_img"
 
 
 class BaiduPage(BasePage):
@@ -14,8 +23,6 @@ class BaiduPage(BasePage):
 
     # ===== 核心元素选择器 =====
     # 搜索输入框 - 多策略定位（百度经常变更结构，提供多种备选）
-
-
     # ===== 页面操作方法 =====
     def open(self) -> None:
         """打开百度首页"""
@@ -126,17 +133,18 @@ class BaiduPage(BasePage):
             }
         }
 
-if __name__=='__main__':
-    
+
+if __name__ == '__main__':
     from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         context = browser.new_context(
-        permissions=["geolocation", "notifications", "clipboard-read"],
-        geolocation={"latitude": 31.2304, "longitude": 121.4737}
-    )
+            permissions=["geolocation", "notifications", "clipboard-read"],
+            geolocation={"latitude": 31.2304, "longitude": 121.4737}
+        )
         page = context.new_page()
-        baidu_page= BaiduPage(page)
+        baidu_page = BaiduPage(page)
         baidu_page.open()
         baidu_page.search('111111111')
 
