@@ -195,9 +195,9 @@ auto_test/
 
 `pages/` 目录实现了标准化的 Page Object Model：
 
-- **base_page.py**：基础页面类，提供通用方法，如导航、元素操作、断言等
+- **base_page.py**：基础页面类，组合 11 个 Mixin 提供导航、元素操作、断言、滚动等通用方法
 - **components/**：可复用组件，如头部导航、侧边栏等
-- **baidu_page.py**：示例页面实现，展示如何使用页面对象模式
+- **baidu_page.py**：示例页面实现，选择器以模块级常量定义在页面类上方，展示 POM 最佳实践
 
 ### 3. 认证管理
 
@@ -285,18 +285,19 @@ from logger import logger, log_step
 def test_baidu_search(page):
     """测试百度搜索功能"""
     logger.info("开始测试百度搜索功能")
-    
+
     baidu_page = BaiduPage(page)
-    
-    with log_step("导航到百度首页"):
-        baidu_page.navigate()
-    
+
+    with log_step("打开百度首页"):
+        baidu_page.open()
+
     with log_step("执行搜索"):
         baidu_page.search("Playwright")
-    
+
     with log_step("验证搜索结果"):
-        assert baidu_page.is_search_result_displayed()
-    
+        assert baidu_page.has_search_results()
+        title = baidu_page.get_first_result_title()
+
     logger.info("百度搜索测试完成")
 ```
 
