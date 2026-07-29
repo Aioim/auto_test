@@ -97,8 +97,7 @@ auto_test/
 │   │   ├── header.py
 │   │   └── login_page.py
 │   ├── __init__.py
-│   ├── baidu_page.py      # 百度搜索页示例
-│   ├── baidu_selector.py  # 百度页面选择器
+│   ├── baidu_page.py      # 百度搜索页（含选择器与页面对象）
 │   └── base_page.py       # 基础页面类
 ├── src/                   # 源代码
 │   ├── api_client/        # API 测试客户端
