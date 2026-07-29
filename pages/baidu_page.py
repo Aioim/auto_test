@@ -5,24 +5,32 @@ from typing import Dict, Any
 from base_page import BasePage
 from logger import logger
 
+# ===== 选择器定义 =====
+# 百度 2026 新版页面结构：textarea 搜索框 + AI 建议列表
+# 注意：百度首页与搜索结果页的 DOM 结构不同，部分选择器仅在一侧生效
+
 search_input = "#chat-textarea"
+"""搜索输入框（textarea，首页和搜索结果页均可见）"""
 
 search_button = "button:has-text('百度一下')"
+"""搜索按钮（仅首页可见；搜索结果页使用 #chat-submit-button）"""
 
 search_results = "#content_left .result-op"
+"""搜索结果列表项（仅搜索结果页有效）"""
 
-first_result_title = "#content_left .result-op .title a"
+first_result_title = "#content_left .result-op h3 a"
+"""第一个搜索结果的标题链接（仅搜索结果页有效）"""
 
-search_suggestions = "#sugWrapper .sug-list"
+search_suggestions = ".bdsug-item"
+"""搜索建议下拉项（仅首页有效；触发条件：输入字符后自动出现）"""
 
 baidu_logo = "#s_lg_img"
+"""百度 Logo（仅首页有效）"""
 
 
 class BaiduPage(BasePage):
     """百度搜索页面"""
 
-    # ===== 核心元素选择器 =====
-    # 搜索输入框 - 多策略定位（百度经常变更结构，提供多种备选）
     # ===== 页面操作方法 =====
     def open(self) -> None:
         """打开百度首页"""
@@ -51,7 +59,7 @@ class BaiduPage(BasePage):
         self.click(search_button)
 
         # 等待搜索结果加载
-        self.wait_for(search_results, state="detached", timeout=10000)
+        self.wait_for(search_results, state="visible", timeout=10000)
 
     def get_first_result_title(self) -> str:
         """获取第一个搜索结果的标题"""
