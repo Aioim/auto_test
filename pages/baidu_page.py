@@ -1,7 +1,7 @@
 """
 百度搜索页面对象
 """
-from typing import Dict, Any
+from typing import Any
 from base_page import BasePage
 from logger import logger
 
@@ -40,23 +40,20 @@ class BaiduPage(BasePage):
 
     def search(self, keyword: str) -> None:
         """
-        执行搜索操作
+        执行搜索操作（键盘回车提交，兼容首页和搜索结果页）
 
         Args:
             keyword: 搜索关键词
         """
-        # 清空输入框（防御性操作）
-        self.clear(search_input)
-
         # 输入关键词
         self.fill(search_input, keyword)
 
         # 等待搜索建议出现（可选，增强稳定性）
         if self.exists(search_suggestions, timeout=1000):
-            self.wait_for_timeout(300)  # 短暂等待建议稳定
+            self.wait_for_timeout(300)
 
-        # 点击搜索按钮
-        self.click(search_button)
+        # 回车提交（兼容首页和搜索结果页，避免按钮选择器仅首页可见的问题）
+        self.press(search_input, "Enter")
 
         # 等待搜索结果加载
         self.wait_for(search_results, state="visible", timeout=10000)
@@ -77,23 +74,17 @@ class BaiduPage(BasePage):
 
     def search_with_keyboard(self, keyword: str) -> None:
         """
-        使用键盘回车执行搜索（不点击按钮）
+        使用键盘回车执行搜索（等同于 search()，保留以兼容旧调用）
         """
-        self.clear(search_input)
-        self.fill(search_input, keyword)
-        self.press(search_input, "Enter")
-        self.wait_for(search_results, state="visible", timeout=10000)
+        self.search(keyword)
 
-    def verify_search_flow(self, keyword: str, expected_text: str) -> bool:
+    def verify_search_flow(self, keyword: str, expected_text: str) -> None:
         """
-        完整的搜索验证流程
+        完整的搜索验证流程，验证失败时抛出 AssertionError
 
         Args:
             keyword: 搜索关键词
             expected_text: 期望在结果中出现的文本
-
-        Returns:
-            bool: 验证是否成功
         """
         try:
             # 1. 打开页面
@@ -111,8 +102,6 @@ class BaiduPage(BasePage):
             self.assert_text(first_result_title, expected_text,
                              message=f"第一个结果应包含 '{expected_text}'")
 
-            return True
-
         except AssertionError as e:
             # 捕获断言失败并截图
             self.screenshot_on_failure(f"search_verification_failed_{keyword}")
@@ -120,7 +109,7 @@ class BaiduPage(BasePage):
             raise
 
     # ===== 调试辅助 =====
-    def debug_search_elements(self) -> Dict[str, Any]:
+    def debug_search_elements(self) -> dict[str, Any]:
         """调试搜索相关元素的状态"""
         return {
             "search_input": {
